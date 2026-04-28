@@ -1,0 +1,354 @@
+[
+  {
+    "model": "P101040_blue",
+    "side": "front",
+    "rgb_count": 3,
+    "sample_count": 3,
+    "failures": 1,
+    "bbox_wh": [
+      [
+        10,
+        10
+      ],
+      [
+        8,
+        7
+      ],
+      [
+        7,
+        9
+      ]
+    ],
+    "render_device": {
+      "requested": true,
+      "cycles_device": "GPU",
+      "compute_device_type": "OPTIX",
+      "devices": [
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "CUDA",
+          "use": true
+        },
+        {
+          "name": "11th Gen Intel Core i7-11800H @ 2.30GHz",
+          "type": "CPU",
+          "use": false
+        },
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "OPTIX",
+          "use": true
+        }
+      ],
+      "fallback": null
+    }
+  },
+  {
+    "model": "P101040_blue",
+    "side": "back",
+    "rgb_count": 3,
+    "sample_count": 3,
+    "failures": 0,
+    "bbox_wh": [
+      [
+        9,
+        8
+      ],
+      [
+        10,
+        6
+      ],
+      [
+        8,
+        8
+      ]
+    ],
+    "render_device": {
+      "requested": true,
+      "cycles_device": "GPU",
+      "compute_device_type": "OPTIX",
+      "devices": [
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "CUDA",
+          "use": true
+        },
+        {
+          "name": "11th Gen Intel Core i7-11800H @ 2.30GHz",
+          "type": "CPU",
+          "use": false
+        },
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "OPTIX",
+          "use": true
+        }
+      ],
+      "fallback": null
+    }
+  },
+  {
+    "model": "QC71336_white",
+    "side": "front",
+    "rgb_count": 3,
+    "sample_count": 3,
+    "failures": 0,
+    "bbox_wh": [
+      [
+        7,
+        8
+      ],
+      [
+        7,
+        8
+      ],
+      [
+        10,
+        8
+      ]
+    ],
+    "render_device": {
+      "requested": true,
+      "cycles_device": "GPU",
+      "compute_device_type": "OPTIX",
+      "devices": [
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "CUDA",
+          "use": true
+        },
+        {
+          "name": "11th Gen Intel Core i7-11800H @ 2.30GHz",
+          "type": "CPU",
+          "use": false
+        },
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "OPTIX",
+          "use": true
+        }
+      ],
+      "fallback": null
+    }
+  },
+  {
+    "model": "QC71336_white",
+    "side": "back",
+    "rgb_count": 3,
+    "sample_count": 3,
+    "failures": 0,
+    "bbox_wh": [
+      [
+        9,
+        6
+      ],
+      [
+        12,
+        10
+      ],
+      [
+        11,
+        12
+      ]
+    ],
+    "render_device": {
+      "requested": true,
+      "cycles_device": "GPU",
+      "compute_device_type": "OPTIX",
+      "devices": [
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "CUDA",
+          "use": true
+        },
+        {
+          "name": "11th Gen Intel Core i7-11800H @ 2.30GHz",
+          "type": "CPU",
+          "use": false
+        },
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "OPTIX",
+          "use": true
+        }
+      ],
+      "fallback": null
+    }
+  },
+  {
+    "model": "QC71336_gray",
+    "side": "front",
+    "rgb_count": 3,
+    "sample_count": 3,
+    "failures": 0,
+    "bbox_wh": [
+      [
+        8,
+        9
+      ],
+      [
+        10,
+        9
+      ],
+      [
+        10,
+        8
+      ]
+    ],
+    "render_device": {
+      "requested": true,
+      "cycles_device": "GPU",
+      "compute_device_type": "OPTIX",
+      "devices": [
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "CUDA",
+          "use": true
+        },
+        {
+          "name": "11th Gen Intel Core i7-11800H @ 2.30GHz",
+          "type": "CPU",
+          "use": false
+        },
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "OPTIX",
+          "use": true
+        }
+      ],
+      "fallback": null
+    }
+  },
+  {
+    "model": "QC71336_gray",
+    "side": "back",
+    "rgb_count": 3,
+    "sample_count": 3,
+    "failures": 0,
+    "bbox_wh": [
+      [
+        9,
+        7
+      ],
+      [
+        13,
+        10
+      ],
+      [
+        13,
+        13
+      ]
+    ],
+    "render_device": {
+      "requested": true,
+      "cycles_device": "GPU",
+      "compute_device_type": "OPTIX",
+      "devices": [
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "CUDA",
+          "use": true
+        },
+        {
+          "name": "11th Gen Intel Core i7-11800H @ 2.30GHz",
+          "type": "CPU",
+          "use": false
+        },
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "OPTIX",
+          "use": true
+        }
+      ],
+      "fallback": null
+    }
+  },
+  {
+    "model": "QC75244_white",
+    "side": "front",
+    "rgb_count": 3,
+    "sample_count": 3,
+    "failures": 0,
+    "bbox_wh": [
+      [
+        8,
+        7
+      ],
+      [
+        7,
+        8
+      ],
+      [
+        4,
+        5
+      ]
+    ],
+    "render_device": {
+      "requested": true,
+      "cycles_device": "GPU",
+      "compute_device_type": "OPTIX",
+      "devices": [
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "CUDA",
+          "use": true
+        },
+        {
+          "name": "11th Gen Intel Core i7-11800H @ 2.30GHz",
+          "type": "CPU",
+          "use": false
+        },
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "OPTIX",
+          "use": true
+        }
+      ],
+      "fallback": null
+    }
+  },
+  {
+    "model": "QC75244_white",
+    "side": "back",
+    "rgb_count": 3,
+    "sample_count": 3,
+    "failures": 0,
+    "bbox_wh": [
+      [
+        6,
+        5
+      ],
+      [
+        4,
+        4
+      ],
+      [
+        6,
+        4
+      ]
+    ],
+    "render_device": {
+      "requested": true,
+      "cycles_device": "GPU",
+      "compute_device_type": "OPTIX",
+      "devices": [
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "CUDA",
+          "use": true
+        },
+        {
+          "name": "11th Gen Intel Core i7-11800H @ 2.30GHz",
+          "type": "CPU",
+          "use": false
+        },
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "OPTIX",
+          "use": true
+        }
+      ],
+      "fallback": null
+    }
+  }
+]
