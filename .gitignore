@@ -57,3 +57,12 @@ examples/my_project/*SUMMARY*/
 examples/my_project/*summary*/
 examples/my_project/*FINAL*/
 examples/my_project/UNIFIED_BLACKDOT_SHOWCASE_4MODELS_FRONT_BACK_3X/
+
+# Defect dataset generator local outputs and caches
+defect_dataset_generator/outputs/
+defect_dataset_generator/**/__pycache__/
+defect_dataset_generator/**/*.pyc
+defect_dataset_generator/*.pt
+examples/my_project/**/_backend/
+examples/my_project/**/__pycache__/
+yolo*.pt

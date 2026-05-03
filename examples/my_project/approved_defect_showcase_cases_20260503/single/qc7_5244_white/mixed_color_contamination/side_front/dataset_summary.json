@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1",
+  "created_at": "2026-05-03T13:22:30",
+  "status": "failed",
+  "count": 1,
+  "total_requested": 1,
+  "total_succeeded": 0,
+  "total_failed": 1,
+  "backend_script": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\reference_blend_qc75244_mixed_color_profile_debug.py",
+  "model_profile": "qc7_5244_white",
+  "seeds_used": [
+    81400
+  ],
+  "material_path": null,
+  "material_override_applied": false,
+  "failed_samples": [
+    {
+      "index": 0,
+      "seed": 81400,
+      "attempts": 1,
+      "errors": [
+        "Quality checks failed for sample 0: {'rgb_exists': True, 'mask_exists': True, 'label_exists': True, 'metadata_exists': True, 'rgb_readable': True, 'mask_readable': True, 'mask_not_empty': True, 'rgb_not_blank': True, 'image_size_matches_mask': True, 'label_bbox_in_0_1': True, 'label_matches_backend_bbox': True, 'label_not_empty': True, 'rgb_not_overexposed': True, 'rgb_not_background_only': True, 'label_bbox_area_reasonable': True, 'rgb_defect_bbox_visible': False, 'rgb_luma_stats': {'mean': 173.46417172749838, 'min': 55, 'max': 223}, 'rgb_exposure_stats': {'mean': 173.46417172749838, 'min': 55, 'max': 223, 'range': 168, 'stddev': 29.744353957723053, 'edge_mean': 2.371382395426432, 'sat250_fraction': 0.0, 'dark5_fraction': 0.0}, 'mask_foreground_stats': {'threshold': 127, 'foreground_pixels': 78, 'total_pixels': 1572864, 'foreground_fraction': 4.9591064453125e-05}, 'passed': False}"
+      ]
+    }
+  ],
+  "blend_file": null,
+  "output_dir": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_white\\mixed_color_contamination\\side_front",
+  "defect_types": [],
+  "exports": {
+    "rgb": true,
+    "masks": false,
+    "yolo_labels": false,
+    "per_image_metadata": false
+  }
+}

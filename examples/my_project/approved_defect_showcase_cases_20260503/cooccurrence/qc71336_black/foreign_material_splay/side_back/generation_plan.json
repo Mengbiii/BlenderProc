@@ -1,0 +1,344 @@
+{
+  "status": "rendered",
+  "backend": "qc71336_black_prebuilt_normal",
+  "backend_script": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\reference_blend_qc71336_black_prebuilt_normal_debug.py",
+  "commands": [
+    [
+      "D:\\Anaconda\\envs\\defect_eval\\python.exe",
+      "E:\\BlenderProject\\BlenderProc\\cli.py",
+      "run",
+      "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\reference_blend_qc71336_black_prebuilt_normal_debug.py",
+      "--",
+      "--blend",
+      "E:\\BlenderProject\\BlenderProc\\assets\\models\\moxing2.blend",
+      "--model_blend",
+      "E:\\BlenderProject\\BlenderProc\\assets\\models\\QC7-1336-black.blend",
+      "--output",
+      "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc71336_black\\foreign_material_splay\\side_back\\_backend\\qc71336_black_reference",
+      "--num",
+      "1",
+      "--start_index",
+      "0",
+      "--samples",
+      "16",
+      "--defect_type",
+      "foreign_material_splay",
+      "--defect_seed",
+      "81610",
+      "--anchor_sides",
+      "back"
+    ]
+  ],
+  "output_dir": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc71336_black\\foreign_material_splay\\side_back",
+  "raw_backend_output_dir": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc71336_black\\foreign_material_splay\\side_back\\_backend\\qc71336_black_reference",
+  "count": 1,
+  "total_requested": 1,
+  "total_succeeded": 1,
+  "total_failed": 0,
+  "failed_samples": [],
+  "target_profile": {
+    "model_id": "QC71336",
+    "appearance_color": "black",
+    "blend_path": "assets/models/moxing2.blend",
+    "model_blend_path": "assets/models/QC7-1336-black.blend",
+    "stl_path": "assets/models/QC7-1336.stl",
+    "material_source": {
+      "mode": "embedded_in_model_blend"
+    },
+    "preferred_backends": {
+      "foreign_material": "qc71336_black_debug",
+      "splay": "qc71336_black_debug",
+      "default": "generic_main_plane"
+    },
+    "supported_defects": [
+      "foreign_material",
+      "splay"
+    ],
+    "default_anchor_sides": [
+      "front",
+      "back"
+    ],
+    "placement_policy": "front_back_main_planes_only",
+    "target_id": "qc71336_black"
+  },
+  "model_profile": "qc71336_black",
+  "defect_type": "foreign_material_splay",
+  "anchor_sides": [
+    "back"
+  ],
+  "seeds_used": [
+    81610
+  ],
+  "render_samples": 16,
+  "placement_policy": "front_back_main_planes_only",
+  "material_source": {
+    "mode": "embedded_in_model_blend"
+  },
+  "defect_generation_logic": {
+    "backend": "qc71336_black_prebuilt_normal",
+    "reference_script": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\reference_blend_qc71336_black_prebuilt_normal_debug.py",
+    "uses_reference_defect_functions": true
+  },
+  "camera": {
+    "mode": "randomized",
+    "profile": "light_domain_randomization_v1",
+    "distance_base": 2.2,
+    "distance_jitter_factor": [
+      -0.05,
+      0.05
+    ],
+    "distance_range": [
+      2.09,
+      2.31
+    ],
+    "azimuth_degrees": [
+      -15,
+      15
+    ],
+    "elevation_degrees": [
+      -10,
+      10
+    ],
+    "roll_degrees": [
+      -5,
+      5
+    ],
+    "focal_length_mm": [
+      65,
+      75
+    ],
+    "override_policy": "User-supplied values or ranges replace these defaults per profile or CLI config."
+  },
+  "lighting": {
+    "mode": "randomized",
+    "profile": "light_domain_randomization_v1",
+    "strength_base": 450,
+    "strength_jitter_factor": [
+      -0.2,
+      0.2
+    ],
+    "strength_range": [
+      360,
+      540
+    ],
+    "direction_jitter_degrees": [
+      -8,
+      8
+    ],
+    "area_size_base": 3.0,
+    "area_size_range": [
+      2.7,
+      3.3
+    ],
+    "background_brightness_base": 0.78,
+    "background_brightness_range": [
+      0.72,
+      0.84
+    ],
+    "override_policy": "User-supplied values or ranges replace these defaults per profile or CLI config."
+  },
+  "background": {
+    "mode": "randomized",
+    "profile": "light_domain_randomization_v1",
+    "color_base": [
+      0.78,
+      0.78,
+      0.78,
+      1.0
+    ],
+    "color_jitter_rgb": [
+      -0.03,
+      0.03
+    ],
+    "color_range_rgb": [
+      [
+        0.75,
+        0.81
+      ],
+      [
+        0.75,
+        0.81
+      ],
+      [
+        0.75,
+        0.81
+      ]
+    ],
+    "override_policy": "User-supplied color or RGB ranges replace these defaults per profile or CLI config."
+  },
+  "samples": [
+    {
+      "index": 0,
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc71336_black\\foreign_material_splay\\side_back\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc71336_black\\foreign_material_splay\\side_back\\masks\\000000.png",
+      "label_yolo": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc71336_black\\foreign_material_splay\\side_back\\labels_yolo\\000000.txt",
+      "metadata": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc71336_black\\foreign_material_splay\\side_back\\metadata\\000000.json",
+      "status": "rendered",
+      "seed": 81610,
+      "backend_model": "qc71336_black",
+      "anchor_side": "back",
+      "requested_anchor_side": "back",
+      "defect_type": "foreign_material_splay",
+      "defect_types": [],
+      "defects": [
+        {
+          "defect_type": "foreign_material",
+          "defect_type_internal": "foreign_material",
+          "defect_type_canonical": "foreign_material",
+          "subtype": "gray_particle",
+          "shape": "flattened_chip",
+          "size_tier": "normal",
+          "target_object": "QC8-8511-000N301002ST0101.002",
+          "object_name": "REFERENCE_FOREIGN_MATERIAL_0000",
+          "mask_object": "REFERENCE_FOREIGN_MATERIAL_0000",
+          "anchor_polygon_index": 543906,
+          "anchor_side": "back",
+          "world_point": [
+            0.1065,
+            0.33833,
+            0.09859
+          ],
+          "world_normal": [
+            0.0,
+            0.0,
+            -1.0
+          ],
+          "radius": 0.0072,
+          "radius_floor": 0.0072,
+          "embed_factor": 0.126165,
+          "placement_jitter_radius": 0.004696,
+          "placement_zone": "central_safe",
+          "local_xy": [
+            -0.0212,
+            0.16083
+          ],
+          "projected_xy": [
+            0.49078741669654846,
+            0.3791569769382477
+          ],
+          "anchor_planar_score": 1.0,
+          "anchor_xy_ratio": [
+            0.021204697027039296,
+            0.16082975483016237
+          ],
+          "version": "qc71336_black_prebuilt_foreign_material_v2"
+        },
+        {
+          "defect_type": "splay",
+          "defect_type_internal": "splay",
+          "defect_type_canonical": "splay",
+          "control_object": "REFERENCE_SPLAY_CTRL_0000",
+          "object_name": "REFERENCE_SPLAY_STREAK_0000",
+          "mask_object": "REFERENCE_SPLAY_STREAK_0000",
+          "appearance_mode": "short_silver_gray_streak_patch",
+          "appearance_tier": "visible",
+          "shape_mode": "localized_oblique_streak",
+          "anchor_polygon_index": 8377,
+          "anchor_side": "back",
+          "world_point": [
+            0.09959,
+            0.22419,
+            0.06199
+          ],
+          "world_normal": [
+            -3e-05,
+            0.38268,
+            -0.92388
+          ],
+          "length": 0.11218,
+          "width": 0.006193,
+          "length_floor": 0.038,
+          "width_floor": 0.0022,
+          "size_tier": "normal",
+          "radius_x": 0.05609,
+          "radius_y": 0.006193,
+          "aspect_ratio": 9.0569,
+          "placement_jitter_radius": 0.006364,
+          "placement_zone": "central_safe",
+          "local_xy": [
+            -0.0237,
+            0.02732
+          ],
+          "debug_splay_strong": false,
+          "projected_xy": [
+            0.48962098360061646,
+            0.4492081105709076
+          ],
+          "anchor_planar_score": 0.9238817691802979,
+          "anchor_xy_ratio": [
+            0.023697359670432686,
+            0.02731807144319179
+          ],
+          "version": "qc71336_black_prebuilt_splay_v1",
+          "materials_touched": [],
+          "mask_mode": "visible_streak_patch",
+          "flow_angle": 0.5954,
+          "alpha": 0.1027,
+          "base_value": 0.2848,
+          "roughness": 0.947,
+          "halo_alpha": 0.0829,
+          "halo_base_value": 0.2775,
+          "halo_roughness": 0.9344
+        }
+      ],
+      "backend_image_id": "000000",
+      "bbox": {
+        "xyxy": [
+          735,
+          458,
+          787,
+          547
+        ],
+        "xywh": [
+          735,
+          458,
+          53,
+          90
+        ],
+        "area_pixels": 525
+      },
+      "quality_checks": {
+        "rgb_exists": true,
+        "mask_exists": true,
+        "label_exists": true,
+        "metadata_exists": true,
+        "rgb_readable": true,
+        "mask_readable": true,
+        "mask_not_empty": true,
+        "rgb_not_blank": true,
+        "image_size_matches_mask": true,
+        "label_not_empty": true,
+        "label_bbox_in_0_1": true,
+        "label_line_count_matches_defects": true,
+        "metadata_defect_count_matches": true,
+        "rgb_not_overexposed": true,
+        "rgb_not_background_only": true,
+        "label_bbox_area_reasonable": true,
+        "rgb_luma_stats": {
+          "mean": 65.09756278991699,
+          "min": 0,
+          "max": 164
+        },
+        "rgb_exposure_stats": {
+          "mean": 65.09756278991699,
+          "min": 0,
+          "max": 164,
+          "range": 164,
+          "stddev": 34.045487845317794,
+          "edge_mean": 3.2050259908040366,
+          "sat250_fraction": 0.0,
+          "dark5_fraction": 0.0032634735107421875
+        },
+        "mask_foreground_stats": {
+          "threshold": 127,
+          "foreground_pixels": 526,
+          "total_pixels": 1572864,
+          "foreground_fraction": 0.0003344217936197917
+        },
+        "passed": true
+      }
+    }
+  ],
+  "backend_log": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc71336_black\\foreign_material_splay\\side_back\\backend_run_log.json",
+  "quality_goal": "coverage_first_not_visual_realism"
+}

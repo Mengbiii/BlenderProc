@@ -1,0 +1,31 @@
+{
+  "schema_version": "0.2",
+  "calibration_type": "visual_material_calibration_manual_blend_debug",
+  "description": "QC7-5244 black v1 image-fitted material parameters with QC7-5244 safe-zone placement enabled for manual .blend inspection.",
+  "source_fit_output": "outputs/fitting/fit_qc7_5244_black_material_v1/best_material.json",
+  "material_parameters": {
+    "base_color": [0.09, 0.088, 0.084, 1.0],
+    "roughness": 0.38,
+    "specular": 0.4,
+    "subsurface": 0.0,
+    "noise_scale": 36.0,
+    "noise_strength": 0.006,
+    "bump_strength": 0.01,
+    "alpha": 1.0,
+    "specular_ior_level": 0.4,
+    "translucency": 0.0
+  },
+  "placement_control": {
+    "use_preset_safe_anchor_windows": true,
+    "notes": [
+      "Constrain black-dot anchor to the QC7-5244 main flat safe-zone for manual material/defect inspection."
+    ]
+  },
+  "scene_calibration": {
+    "light_strength": 380.0,
+    "exposure": -0.15,
+    "camera_profile": "deterministic_ortho_front",
+    "render_resolution": [512, 384],
+    "background_color": [0.55, 0.55, 0.55, 1.0]
+  }
+}

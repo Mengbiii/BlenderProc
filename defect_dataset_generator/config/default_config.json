@@ -1,0 +1,46 @@
+{
+  "schema_version": "0.1",
+  "project": {
+    "assets_dir": "assets/models",
+    "default_output_dir": "defect_dataset_generator/outputs"
+  },
+  "render": {
+    "width": 1536,
+    "height": 1024,
+    "samples": 64,
+    "engine": "cycles"
+  },
+  "camera": {
+    "mode": "randomized",
+    "profile": "light_domain_randomization_v1",
+    "azimuth_degrees": [-15, 15],
+    "elevation_degrees": [-10, 10],
+    "roll_degrees": [-5, 5],
+    "distance_jitter_factor": [-0.05, 0.05]
+  },
+  "lighting": {
+    "mode": "randomized",
+    "profile": "light_domain_randomization_v1",
+    "strength_jitter_factor": [-0.2, 0.2],
+    "direction_jitter_degrees": [-8, 8]
+  },
+  "background": {
+    "mode": "randomized",
+    "profile": "light_domain_randomization_v1",
+    "color_jitter_rgb": [-0.03, 0.03]
+  },
+  "defect_placement": {
+    "mode": "front_back_main_planes_only",
+    "allowed_surface_sides": ["front", "back"],
+    "allowed_surface_regions": ["main_plane"],
+    "exclude_complex_edges": true,
+    "exclude_holes": true,
+    "exclude_side_walls": true
+  },
+  "exports": {
+    "rgb": true,
+    "masks": true,
+    "yolo_labels": true,
+    "metadata": true
+  }
+}

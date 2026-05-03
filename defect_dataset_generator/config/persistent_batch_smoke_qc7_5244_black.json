@@ -1,0 +1,34 @@
+{
+  "schema_version": "persistent_batch_plan_v0.1",
+  "description": "Small persistent renderer smoke plan for qc7_5244_black generic-equivalent defects.",
+  "samples": [
+    {
+      "index": 0,
+      "mode": "single",
+      "defects": ["black_dot"],
+      "side": "back",
+      "seed": 51000
+    },
+    {
+      "index": 1,
+      "mode": "single",
+      "defects": ["foreign_material"],
+      "side": "back",
+      "seed": 51001
+    },
+    {
+      "index": 2,
+      "mode": "cooccurrence",
+      "defects": ["black_dot", "foreign_material", "splay"],
+      "side": "back",
+      "seed": 51002
+    },
+    {
+      "index": 3,
+      "mode": "normal",
+      "defects": [],
+      "side": "back",
+      "seed": 51003
+    }
+  ]
+}

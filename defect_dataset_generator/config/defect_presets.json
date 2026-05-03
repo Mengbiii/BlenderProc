@@ -1,0 +1,31 @@
+{
+  "schema_version": "0.1",
+  "mode": "randomized",
+  "position_mode": "random_visible_surface",
+  "camera_mode": "randomized",
+  "lighting_mode": "randomized",
+  "defects": [
+    {
+      "type": "black_dot",
+      "size": [0.015, 0.055],
+      "opacity": 0.85,
+      "color": [0.015, 0.012, 0.01, 1.0],
+      "blur": 0.12,
+      "depth": 0.18,
+      "position": "random_visible_surface",
+      "visibility": 1.0,
+      "randomness": 0.65
+    },
+    {
+      "type": "mixed_color_contamination",
+      "size": [0.04, 0.16],
+      "opacity": 0.35,
+      "color": [0.75, 0.72, 0.66, 1.0],
+      "blur": 0.45,
+      "depth": 0.02,
+      "position": "random_visible_surface",
+      "visibility": 0.75,
+      "randomness": 0.8
+    }
+  ]
+}

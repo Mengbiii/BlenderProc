@@ -15,6 +15,7 @@ from mathutils import Matrix, Vector
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
 ASSET_MODEL_DIR = REPO_ROOT / "assets" / "models"
+EXTERNAL_PLACEMENT_CONTROL = None
 
 MODEL_PRESETS = {
     "P101040_blue": {
@@ -43,8 +44,9 @@ MODEL_PRESETS = {
         "appearance_profile": "qc71336_white_prebuilt_profile",
         "material_family": "prebuilt_authored_white_plastic",
         "use_gray_override": False,
-        "radius_scale": (0.0034, 0.0060),
-        "depth_scale": (0.00110, 0.00210),
+        "black_dot_style": "qc71336_white_prebuilt_legacy_v1",
+        "radius_scale": (0.00171, 0.00209),
+        "depth_scale": (0.00063, 0.00076),
         "samples": 256,
         "anchor_sides": ("front",),
         "camera_lens": 64.0,
@@ -78,6 +80,15 @@ MODEL_PRESETS = {
         "anchor_sides": ("front",),
         "camera_lens": 78.0,
         "camera_shift_y": 0.025,
+        "safe_anchor_windows": [
+            {
+                "name": "qc75244_main_flat_center",
+                "local_x": (-0.36, 0.42),
+                "local_y": (-0.34, 0.42),
+                "local_z_abs_min": 0.66,
+                "normal_z_min": 0.82
+            }
+        ],
     },
 }
 
@@ -105,6 +116,7 @@ def parse_args():
     parser.add_argument("--blend", default=None, help="Override the reference-scene blend.")
     parser.add_argument("--stl", default=None, help="Override STL path for STL-backed presets.")
     parser.add_argument("--model_blend", default=None, help="Override appended model blend for QC71336 presets.")
+    parser.add_argument("--material_json", "--material-json", default=None, help="Optional visual material calibration JSON for the main object material.")
     parser.add_argument("--anchor_sides", nargs="+", choices=["front", "back"], default=None)
     parser.add_argument("--black_dot_radius_min_scale", type=float, default=None)
     parser.add_argument("--black_dot_radius_max_scale", type=float, default=None)
@@ -113,6 +125,10 @@ def parse_args():
     parser.add_argument("--camera_jitter_strength", type=float, default=1.0)
     parser.add_argument("--light_jitter_strength", type=float, default=1.0)
     parser.add_argument("--object_jitter_degrees", type=float, default=0.0)
+    parser.add_argument("--object_transform_mode", choices=["none", "keep_camera"], default="none")
+    parser.add_argument("--object_transform_camera_side", choices=["front", "back"], default="front")
+    parser.add_argument("--object_rotate_deg", nargs=3, type=float, default=None, metavar=("RX", "RY", "RZ"))
+    parser.add_argument("--object_translate", nargs=3, type=float, default=[0.0, 0.0, 0.0], metavar=("X", "Y", "Z"))
     parser.add_argument("--max_attempts_per_image", type=int, default=12)
     parser.add_argument("--save_blend", action="store_true")
     parser.add_argument("--save_blend_only_first", action="store_true", default=True)
@@ -275,6 +291,167 @@ def add_noise_bump(mat, scale=800.0, strength=0.001, distance=0.0008):
     tree.links.new(mapping.outputs["Vector"], noise.inputs["Vector"])
     tree.links.new(noise.outputs["Fac"], bump.inputs["Height"])
     tree.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
+
+
+def load_external_material_parameters(material_json_path):
+    if not material_json_path:
+        return None
+    path = Path(material_json_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Material JSON not found: {path}")
+    with path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+    material_parameters = data.get("material_parameters", data)
+    if not isinstance(material_parameters, dict):
+        raise ValueError("Material JSON must contain an object under material_parameters or use the old flat schema.")
+    return {
+        "path": str(path),
+        "schema_version": data.get("schema_version", "legacy_flat"),
+        "calibration_type": data.get("calibration_type"),
+        "material_parameters": material_parameters,
+        "material_source": data.get("material_source"),
+        "placement_control": data.get("placement_control"),
+        "scene_calibration": data.get("scene_calibration", {}),
+    }
+
+
+def apply_external_visual_material(objects, material_json_path):
+    global EXTERNAL_PLACEMENT_CONTROL
+    calibration = load_external_material_parameters(material_json_path)
+    if calibration is None:
+        return None
+    EXTERNAL_PLACEMENT_CONTROL = calibration.get("placement_control")
+    material_source = calibration.get("material_source")
+    if material_source:
+        return apply_external_blend_material(objects, calibration, material_source)
+    params = calibration["material_parameters"]
+    base_color = params.get("base_color", (0.72, 0.72, 0.72, 1.0))
+    if len(base_color) == 3:
+        base_color = list(base_color) + [1.0]
+    roughness = float(params.get("roughness", 0.55))
+    specular = float(params.get("specular", params.get("specular_ior_level", 0.25)))
+    alpha = float(params.get("alpha", 1.0))
+    mat = make_principled_material(
+        "UNIFIED_EXTERNAL_VISUAL_CALIBRATION_MAT",
+        tuple(float(v) for v in base_color[:4]),
+        roughness,
+        specular,
+        alpha=alpha,
+    )
+    bump_strength = float(params.get("bump_strength", 0.0) or 0.0)
+    noise_strength = float(params.get("noise_strength", 0.0) or 0.0)
+    if bump_strength > 0.0 or noise_strength > 0.0:
+        noise_scale = float(params.get("noise_scale", 96.0) or 96.0)
+        bump_distance = max(0.00035, min(0.006, noise_strength * 0.08 if noise_strength > 0 else 0.001))
+        add_noise_bump(mat, scale=noise_scale, strength=max(bump_strength, noise_strength), distance=bump_distance)
+    assigned_objects = []
+    for obj in objects:
+        if obj.type != "MESH":
+            continue
+        obj.data.materials.clear()
+        obj.data.materials.append(mat)
+        assigned_objects.append(obj.name)
+    bpy.context.view_layer.update()
+    return {
+        "external_material_json": calibration["path"],
+        "schema_version": calibration["schema_version"],
+        "calibration_type": calibration["calibration_type"],
+        "material_name": mat.name,
+        "assigned_objects": assigned_objects,
+        "material_parameters_used": {
+            "base_color": tuple(float(v) for v in base_color[:4]),
+            "roughness": roughness,
+            "specular": specular,
+            "alpha": alpha,
+            "noise_scale": float(params.get("noise_scale", 96.0) or 96.0),
+            "noise_strength": noise_strength,
+            "bump_strength": bump_strength,
+        },
+        "scene_calibration_recorded_only": calibration.get("scene_calibration", {}),
+        "scoring_fields_used_for_rendering": False,
+    }
+
+
+def apply_external_blend_material(objects, calibration, material_source):
+    blend_path = Path(material_source.get("blend_path", ""))
+    material_name = material_source.get("material_name")
+    if not blend_path.exists():
+        raise FileNotFoundError(f"Source material blend not found: {blend_path}")
+    if not material_name:
+        raise ValueError("material_source.material_name is required when using a blend material source.")
+
+    before_names = set(bpy.data.materials.keys())
+    directory = str(blend_path) + "\\Material\\"
+    bpy.ops.wm.append(filename=material_name, directory=directory)
+    appended = [mat for mat in bpy.data.materials if mat.name not in before_names]
+    if appended:
+        source_mat = appended[-1]
+    else:
+        source_mat = bpy.data.materials.get(material_name)
+    if source_mat is None:
+        raise RuntimeError(f"Could not append material '{material_name}' from {blend_path}")
+
+    assigned_objects = []
+    for obj in objects:
+        if obj.type != "MESH":
+            continue
+        mat = source_mat.copy()
+        mat.name = f"UNIFIED_EXTERNAL_BLEND_MAT_{obj.name[:32]}"
+        adjust_external_blend_material_nodes(mat, material_source)
+        obj.data.materials.clear()
+        obj.data.materials.append(mat)
+        assigned_objects.append(obj.name)
+    bpy.context.view_layer.update()
+    return {
+        "external_material_json": calibration["path"],
+        "schema_version": calibration["schema_version"],
+        "calibration_type": calibration["calibration_type"],
+        "material_source": {
+            "blend_path": str(blend_path),
+            "material_name": material_name,
+            "source_material_name_after_append": source_mat.name,
+        },
+        "assigned_objects": assigned_objects,
+        "material_parameters_used": calibration.get("material_parameters", {}),
+        "scene_calibration_recorded_only": calibration.get("scene_calibration", {}),
+        "scoring_fields_used_for_rendering": False,
+    }
+
+
+def adjust_external_blend_material_nodes(mat, material_source):
+    if not mat or not mat.use_nodes or mat.node_tree is None:
+        return
+    tree = mat.node_tree
+    disable_normal = bool(material_source.get("disable_normal_map", False))
+    normal_strength_scale = material_source.get("normal_strength_scale")
+    if disable_normal:
+        for node in tree.nodes:
+            if node.type == "BSDF_PRINCIPLED":
+                normal_socket = node.inputs.get("Normal")
+                if normal_socket is not None:
+                    for link in list(normal_socket.links):
+                        tree.links.remove(link)
+    elif normal_strength_scale is not None:
+        scale = float(normal_strength_scale)
+        for node in tree.nodes:
+            if node.type in {"NORMAL_MAP", "BUMP"}:
+                strength = node.inputs.get("Strength")
+                if strength is not None:
+                    strength.default_value = float(strength.default_value) * scale
+
+    texture_scale = material_source.get("texture_scale")
+    if texture_scale is not None:
+        scale = float(texture_scale)
+        for node in tree.nodes:
+            if node.type == "MAPPING":
+                scale_socket = node.inputs.get("Scale")
+                if scale_socket is not None:
+                    try:
+                        scale_socket.default_value[0] *= scale
+                        scale_socket.default_value[1] *= scale
+                        scale_socket.default_value[2] *= scale
+                    except Exception:
+                        pass
 
 
 def render_still(path):
@@ -539,7 +716,7 @@ def tune_reference_lighting_for_qc71336_white():
     bpy.context.view_layer.update()
 
 
-def tune_reference_lighting_for_qc75244_white():
+def tune_reference_lighting_for_qc75244_white(base_energy_multiplier=1.0):
     scene = bpy.context.scene
     energy_scale_map = {
         "Area": 0.12,
@@ -552,7 +729,7 @@ def tune_reference_lighting_for_qc75244_white():
         if obj.type != "LIGHT":
             continue
         base_energy = 2000.0 if obj.data.type == "AREA" else 500.0
-        obj.data.energy = base_energy * energy_scale_map.get(obj.name, 0.18)
+        obj.data.energy = base_energy * energy_scale_map.get(obj.name, 0.18) * base_energy_multiplier
         if getattr(obj.data, "color", None) is not None:
             obj.data.color = (1.0, 0.989, 0.975) if obj.name == "Area.003" else (0.97, 0.976, 0.988)
         if obj.data.type == "AREA":
@@ -950,6 +1127,60 @@ def configure_support_for_view_side(objects, side):
     bpy.context.view_layer.update()
 
 
+def build_object_view_transform(args, defect):
+    enabled = args.object_transform_mode == "keep_camera"
+    rotation = args.object_rotate_deg
+    if rotation is None:
+        rotation = [180.0, 0.0, 0.0] if enabled and defect.get("anchor_side") == "back" else [0.0, 0.0, 0.0]
+    translation = [float(value) for value in (args.object_translate or [0.0, 0.0, 0.0])]
+    return {
+        "enabled": bool(enabled),
+        "mode": args.object_transform_mode,
+        "camera_moved_for_defect_side": False if enabled else None,
+        "camera_side": args.object_transform_camera_side,
+        "physical_anchor_side": defect.get("anchor_side"),
+        "rotation_degrees_xyz": [float(value) for value in rotation],
+        "translation_xyz": translation,
+        "pivot_policy": "product_bbox_center",
+        "environment_transform": "none",
+        "default_backside_operation": bool(
+            enabled
+            and defect.get("anchor_side") == "back"
+            and args.object_rotate_deg is None
+            and all(abs(value) < 1e-9 for value in translation)
+        ),
+    }
+
+
+def apply_object_view_transform(objects, defect, transform):
+    rotation_deg = transform.get("rotation_degrees_xyz") or [0.0, 0.0, 0.0]
+    translation = Vector(transform.get("translation_xyz") or [0.0, 0.0, 0.0])
+    bb_min, bb_max = world_bbox(objects)
+    pivot = (bb_min + bb_max) * 0.5
+    rotation = Matrix.Identity(4)
+    rotation = Matrix.Rotation(math.radians(rotation_deg[2]), 4, "Z") @ rotation
+    rotation = Matrix.Rotation(math.radians(rotation_deg[1]), 4, "Y") @ rotation
+    rotation = Matrix.Rotation(math.radians(rotation_deg[0]), 4, "X") @ rotation
+    matrix = Matrix.Translation(pivot + translation) @ rotation @ Matrix.Translation(-pivot)
+    transform_objects = list(objects)
+    for key in ("dot_object", "patch_object", "foreign_object", "mask_object"):
+        name = defect.get(key)
+        obj = bpy.data.objects.get(name) if name else None
+        if obj is not None and obj not in transform_objects:
+            transform_objects.append(obj)
+    for obj in transform_objects:
+        obj.matrix_world = matrix @ obj.matrix_world
+    if defect.get("world_point"):
+        world_point = matrix @ Vector(defect["world_point"])
+        defect["world_point"] = [float(world_point.x), float(world_point.y), float(world_point.z)]
+    if defect.get("world_normal"):
+        world_normal = (matrix.to_3x3() @ Vector(defect["world_normal"])).normalized()
+        defect["world_normal"] = [float(world_normal.x), float(world_normal.y), float(world_normal.z)]
+    transform["pivot_world"] = [float(pivot.x), float(pivot.y), float(pivot.z)]
+    transform["objects_transformed"] = [obj.name for obj in transform_objects]
+    bpy.context.view_layer.update()
+
+
 def refine_camera_shift_for_defect(camera, world_point, rng):
     scene = bpy.context.scene
     projected = world_to_camera_view(scene, camera, world_point)
@@ -1060,6 +1291,9 @@ def setup_p101040(args, preset):
     imported = import_stl(stl_path)
     fit_objects_to_reference(imported, reference_objects)
     material_info = assign_bluer_material(imported, reference_objects)
+    external_material_info = apply_external_visual_material(imported, args.material_json)
+    if external_material_info is not None:
+        material_info = {"default_material_info": material_info, "external_material_override": external_material_info}
     camera = ensure_camera_for_objects(imported, args.width, args.height, lens=preset["camera_lens"], shift_y=preset["camera_shift_y"])
     camera.data.lens = preset["camera_lens"]
     return {
@@ -1089,6 +1323,9 @@ def setup_qc71336(args, preset):
         material_info = {"gray_override_material": material_name}
     else:
         material_info = tune_prebuilt_white_materials(imported)
+    external_material_info = apply_external_visual_material(imported, args.material_json)
+    if external_material_info is not None:
+        material_info = {"default_material_info": material_info, "external_material_override": external_material_info}
     camera = ensure_camera_for_objects(imported, args.width, args.height, lens=preset["camera_lens"], shift_y=preset["camera_shift_y"])
     camera.data.lens = preset["camera_lens"]
     return {
@@ -1109,8 +1346,12 @@ def setup_qc75244(args, preset):
     hide_non_primary_meshes(primary_obj)
     ensure_clean_reference_support(primary_obj)
     camera = ensure_camera_for_objects([primary_obj], args.width, args.height, lens=preset["camera_lens"], shift_y=preset["camera_shift_y"])
-    tune_reference_lighting_for_qc75244_white()
+    back_only = tuple(args.anchor_sides or ()) == ("back",)
+    tune_reference_lighting_for_qc75244_white(base_energy_multiplier=1.5 if back_only else 1.0)
     material_info = assign_qc75244_white_material(primary_obj)
+    external_material_info = apply_external_visual_material([primary_obj], args.material_json)
+    if external_material_info is not None:
+        material_info = {"default_material_info": material_info, "external_material_override": external_material_info}
     camera.data.lens = preset["camera_lens"]
     bpy.context.view_layer.update()
     return {
@@ -1129,7 +1370,12 @@ def configure_render(samples, width, height):
     return configure_cycles_gpu(samples)
 
 
-def sample_anchor(objects, camera_presets, rng, allowed_sides):
+def sample_anchor(objects, camera_presets, rng, allowed_sides, preset_config=None):
+    preset_config = preset_config or {}
+    placement_control = EXTERNAL_PLACEMENT_CONTROL or {}
+    safe_windows = placement_control.get("safe_anchor_windows")
+    if safe_windows is None and placement_control.get("use_preset_safe_anchor_windows"):
+        safe_windows = preset_config.get("safe_anchor_windows")
     candidates = []
     for obj in objects:
         mesh = obj.data
@@ -1156,6 +1402,8 @@ def sample_anchor(objects, camera_presets, rng, allowed_sides):
             local_y = float(world_center.y - center.y) / half_y
             local_z = float(world_center.z - center.z) / half_z
             if abs(local_x) > 0.90 or abs(local_y) > 0.92:
+                continue
+            if safe_windows and not anchor_in_safe_window(local_x, local_y, local_z, normal, safe_windows):
                 continue
             if max(float(poly.area), 1e-10) < area_floor:
                 continue
@@ -1184,6 +1432,24 @@ def sample_anchor(objects, camera_presets, rng, allowed_sides):
     floor = shortlist[-1]["score"]
     weights = [max(item["score"] - floor + 0.02, 0.002) for item in shortlist]
     return rng.choices(shortlist, weights=weights, k=1)[0]
+
+
+def anchor_in_safe_window(local_x, local_y, local_z, normal, safe_windows):
+    for window in safe_windows:
+        x_min, x_max = window.get("local_x", (-1.0, 1.0))
+        y_min, y_max = window.get("local_y", (-1.0, 1.0))
+        z_abs_min = float(window.get("local_z_abs_min", 0.0))
+        normal_z_min = float(window.get("normal_z_min", 0.0))
+        if not (float(x_min) <= local_x <= float(x_max)):
+            continue
+        if not (float(y_min) <= local_y <= float(y_max)):
+            continue
+        if abs(local_z) < z_abs_min:
+            continue
+        if abs(float(normal.z)) < normal_z_min:
+            continue
+        return True
+    return False
 
 
 def set_embedded_blend(mat, alpha):
@@ -1235,13 +1501,18 @@ def create_local_patch(model_name, world_point, world_normal, radius, mat, rng):
     verts = [(0.0, 0.0, z_inner)]
     inner_ring = []
     outer_ring = []
-    wave_freq = rng.uniform(2.0, 4.0)
+    wave_freq = rng.uniform(2.0, 3.6) if model_name == "QC71336_white" else rng.uniform(2.0, 4.0)
     wave_phase = rng.uniform(0.0, math.tau)
     for idx in range(vertex_count):
         angle = math.tau * idx / vertex_count
-        wave = 1.0 + 0.10 * math.sin(angle * wave_freq + wave_phase)
-        inner_radius = radius * rng.uniform(0.42, 0.62) * wave
-        outer_radius = radius * rng.uniform(0.86, 1.30) * wave
+        wave_amplitude = 0.06 if model_name == "QC71336_white" else 0.10
+        wave = 1.0 + wave_amplitude * math.sin(angle * wave_freq + wave_phase)
+        if model_name == "QC71336_white":
+            inner_radius = radius * rng.uniform(0.36, 0.52) * wave
+            outer_radius = radius * rng.uniform(0.82, 1.06) * wave
+        else:
+            inner_radius = radius * rng.uniform(0.42, 0.62) * wave
+            outer_radius = radius * rng.uniform(0.86, 1.30) * wave
         inner_ring.append(len(verts))
         verts.append((math.cos(angle) * inner_radius * squash_x, math.sin(angle) * inner_radius * squash_y, z_inner))
         outer_ring.append(len(verts))
@@ -1256,7 +1527,8 @@ def create_local_patch(model_name, world_point, world_normal, radius, mat, rng):
     mesh.update()
     patch = bpy.data.objects.new("UNIFIED_BLACK_DOT_LOCAL", mesh)
     bpy.context.collection.objects.link(patch)
-    patch.location = world_point + world_normal * max(radius * 0.010, 1e-5)
+    patch_offset_factor = 0.004 if model_name == "QC71336_white" else 0.010
+    patch.location = world_point + world_normal * max(radius * patch_offset_factor, 1e-5)
     patch.rotation_euler = world_normal.to_track_quat("Z", "Y").to_euler()
     patch.rotation_euler.rotate_axis("Z", rng.uniform(0.0, math.tau))
     patch.data.materials.append(mat)
@@ -1271,7 +1543,7 @@ def create_black_dot_mesh(model_name, radius, depth, rng):
     squash_y = rng.uniform(0.64, 1.28) if model_name == "P101040_blue" else rng.uniform(0.70, 1.22)
     top_z = depth * (rng.uniform(0.18, 0.36) if model_name == "P101040_blue" else rng.uniform(0.16, 0.28))
     bottom_z = -depth * (rng.uniform(0.50, 0.76) if model_name == "P101040_blue" else rng.uniform(0.42, 0.62))
-    wave_freq = rng.uniform(2.0, 5.2)
+    wave_freq = rng.uniform(2.2, 5.2) if model_name == "QC71336_white" else rng.uniform(2.0, 5.2)
     wave_phase = rng.uniform(0.0, math.tau)
     verts = [(0.0, 0.0, top_z), (0.0, 0.0, bottom_z)]
     inner_ring = []
@@ -1280,16 +1552,22 @@ def create_black_dot_mesh(model_name, radius, depth, rng):
     for idx in range(vertex_count):
         angle = math.tau * idx / vertex_count
         wave = 1.0 + 0.12 * math.sin(angle * wave_freq + wave_phase)
-        local_radius = radius * rng.uniform(0.62, 1.28) * wave
+        if model_name == "QC71336_white":
+            local_radius = radius * rng.uniform(0.66, 1.12) * wave
+        else:
+            local_radius = radius * rng.uniform(0.62, 1.28) * wave
         x = math.cos(angle) * local_radius * squash_x
         y = math.sin(angle) * local_radius * squash_y
-        inner_radius = local_radius * rng.uniform(0.30, 0.50)
+        inner_radius = local_radius * (rng.uniform(0.28, 0.46) if model_name == "QC71336_white" else rng.uniform(0.30, 0.50))
         inner_ring.append(len(verts))
-        verts.append((math.cos(angle) * inner_radius * squash_x, math.sin(angle) * inner_radius * squash_y, top_z * rng.uniform(0.84, 1.08)))
+        inner_top_scale = rng.uniform(0.82, 1.04) if model_name == "QC71336_white" else rng.uniform(0.84, 1.08)
+        verts.append((math.cos(angle) * inner_radius * squash_x, math.sin(angle) * inner_radius * squash_y, top_z * inner_top_scale))
         top_ring.append(len(verts))
-        verts.append((x, y, top_z * rng.uniform(0.48, 0.88)))
+        top_outer_scale = rng.uniform(0.38, 0.76) if model_name == "QC71336_white" else rng.uniform(0.48, 0.88)
+        verts.append((x, y, top_z * top_outer_scale))
         bottom_ring.append(len(verts))
-        verts.append((x * rng.uniform(0.76, 1.06), y * rng.uniform(0.76, 1.06), bottom_z))
+        bottom_xy_scale = rng.uniform(0.80, 1.06) if model_name == "QC71336_white" else rng.uniform(0.76, 1.06)
+        verts.append((x * bottom_xy_scale, y * bottom_xy_scale, bottom_z))
     faces = []
     material_indices = []
     for idx in range(vertex_count):
@@ -1313,7 +1591,7 @@ def create_black_dot_mesh(model_name, radius, depth, rng):
 def add_black_dot(model_name, objects, camera_presets, radius_range, depth_range, rng, allowed_sides,
                   preset_config=None):
     preset_config = preset_config or {}
-    anchor = sample_anchor(objects, camera_presets, rng, allowed_sides)
+    anchor = sample_anchor(objects, camera_presets, rng, allowed_sides, preset_config=preset_config)
     bb_min, bb_max = world_bbox(objects)
     dims = bb_max - bb_min
     axis_values = {"x": abs(float(dims.x)), "y": abs(float(dims.y)), "z": abs(float(dims.z))}
@@ -1326,12 +1604,12 @@ def add_black_dot(model_name, objects, camera_presets, radius_range, depth_range
     radius = size_ref * rng.uniform(radius_range[0], radius_range[1])
     depth = size_ref * rng.uniform(depth_range[0], depth_range[1])
     materials = build_black_dot_materials(model_name, rng)
-    patch_radius = radius * rng.uniform(1.12, 1.85)
+    patch_radius = radius * (rng.uniform(1.12, 1.26) if model_name == "QC71336_white" else rng.uniform(1.12, 1.85))
     patch = create_local_patch(model_name, anchor["world_point"], anchor["world_normal"], patch_radius, materials[2], rng)
     mesh = create_black_dot_mesh(model_name, radius, depth, rng)
     dot = bpy.data.objects.new("UNIFIED_BLACK_DOT", mesh)
     bpy.context.collection.objects.link(dot)
-    embed_offset = max(depth * 0.11, radius * 0.010)
+    embed_offset = max(depth * 0.085, radius * 0.009) if model_name == "QC71336_white" else max(depth * 0.11, radius * 0.010)
     if model_name == "P101040_blue":
         embed_offset = max(depth * 0.20, radius * 0.016)
     dot.location = anchor["world_point"] - anchor["world_normal"] * embed_offset
@@ -1634,17 +1912,24 @@ def main():
                 allowed_sides,
                 preset,
             )
-            apply_camera_preset(camera, active_camera_presets[defect["anchor_side"]])
-            configure_support_for_view_side(objects, defect["anchor_side"])
-            camera_jitter = apply_camera_jitter(
-                camera,
-                objects,
-                defect["anchor_side"],
-                Vector(defect["world_point"]),
-                rng,
-                args.camera_jitter_strength,
-            )
-            light_jitter = apply_light_jitter(scene_state, rng, args.light_jitter_strength)
+            view_transform = build_object_view_transform(args, defect)
+            camera_side = view_transform["camera_side"] if view_transform["enabled"] else defect["anchor_side"]
+            apply_camera_preset(camera, active_camera_presets[camera_side])
+            configure_support_for_view_side(objects, camera_side)
+            if view_transform["enabled"]:
+                camera_jitter = {"enabled": False, "reason": "object_transform_keep_camera"}
+                light_jitter = {"enabled": False, "reason": "object_transform_keep_camera"}
+                apply_object_view_transform(objects, defect, view_transform)
+            else:
+                camera_jitter = apply_camera_jitter(
+                    camera,
+                    objects,
+                    defect["anchor_side"],
+                    Vector(defect["world_point"]),
+                    rng,
+                    args.camera_jitter_strength,
+                )
+                light_jitter = apply_light_jitter(scene_state, rng, args.light_jitter_strength)
             projected = world_to_camera_view(bpy.context.scene, camera, Vector(defect["world_point"]))
             if projected.z <= 0.0 or not (0.06 <= projected.x <= 0.94 and 0.06 <= projected.y <= 0.94):
                 raise RuntimeError(f"defect outside camera frame after jitter: {[projected.x, projected.y, projected.z]}")
@@ -1656,6 +1941,8 @@ def main():
             render_still(rgb_path)
             render_black_dot_binary_mask(mask_path, defect["dot_object"])
             binary, bbox, mask_width, mask_height = load_mask_binary(mask_path)
+            if bbox is None or bbox["xywh"][2] <= 0 or bbox["xywh"][3] <= 0:
+                raise RuntimeError("black dot mask is empty after render")
             save_mask_overlay(
                 rgb_path,
                 overlay_path,
@@ -1665,10 +1952,8 @@ def main():
                 bbox,
                 "UNIFIED_BLACK_DOT_OVERLAY_EXPORT",
             )
-            label_text = ""
-            if bbox is not None and bbox["xywh"][2] > 0 and bbox["xywh"][3] > 0:
-                yolo = bbox_to_yolo(bpy.context.scene, bbox)
-                label_text = f"0 {yolo[0]:.6f} {yolo[1]:.6f} {yolo[2]:.6f} {yolo[3]:.6f}\n"
+            yolo = bbox_to_yolo(bpy.context.scene, bbox)
+            label_text = f"0 {yolo[0]:.6f} {yolo[1]:.6f} {yolo[2]:.6f} {yolo[3]:.6f}\n"
             label_path.write_text(label_text, encoding="utf-8")
 
             blend_rel = None
@@ -1697,6 +1982,7 @@ def main():
                 "object_jitter": object_jitter,
                 "camera_jitter": camera_jitter,
                 "light_jitter": light_jitter,
+                "view_transform": view_transform,
                 "random_seed": args.seed + image_index * 1009 + total_attempts,
             })
             accepted += 1

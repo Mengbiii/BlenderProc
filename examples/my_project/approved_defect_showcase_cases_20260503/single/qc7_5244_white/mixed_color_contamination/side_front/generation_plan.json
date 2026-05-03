@@ -1,0 +1,184 @@
+{
+  "status": "failed",
+  "backend": "qc75244_mixed_color_profile",
+  "backend_script": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\reference_blend_qc75244_mixed_color_profile_debug.py",
+  "commands": [
+    [
+      "D:\\Anaconda\\envs\\defect_eval\\python.exe",
+      "E:\\BlenderProject\\BlenderProc\\cli.py",
+      "run",
+      "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\reference_blend_qc75244_mixed_color_profile_debug.py",
+      "--",
+      "--blend",
+      "E:\\BlenderProject\\BlenderProc\\assets\\models\\moxing1_test.blend",
+      "--stl",
+      "E:\\BlenderProject\\BlenderProc\\assets\\models\\QC7-5236.stl",
+      "--output",
+      "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_white\\mixed_color_contamination\\side_front\\_backend\\qc75244_mixed_color_reference",
+      "--num",
+      "1",
+      "--start_index",
+      "0",
+      "--samples",
+      "16",
+      "--enable_mixed_color",
+      "--mixed_color_seed",
+      "81400",
+      "--anchor_sides",
+      "front"
+    ]
+  ],
+  "output_dir": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_white\\mixed_color_contamination\\side_front",
+  "raw_backend_output_dir": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_white\\mixed_color_contamination\\side_front\\_backend\\qc75244_mixed_color_reference",
+  "count": 1,
+  "total_requested": 1,
+  "total_succeeded": 0,
+  "total_failed": 1,
+  "failed_samples": [
+    {
+      "index": 0,
+      "seed": 81400,
+      "attempts": 1,
+      "errors": [
+        "Quality checks failed for sample 0: {'rgb_exists': True, 'mask_exists': True, 'label_exists': True, 'metadata_exists': True, 'rgb_readable': True, 'mask_readable': True, 'mask_not_empty': True, 'rgb_not_blank': True, 'image_size_matches_mask': True, 'label_bbox_in_0_1': True, 'label_matches_backend_bbox': True, 'label_not_empty': True, 'rgb_not_overexposed': True, 'rgb_not_background_only': True, 'label_bbox_area_reasonable': True, 'rgb_defect_bbox_visible': False, 'rgb_luma_stats': {'mean': 173.46417172749838, 'min': 55, 'max': 223}, 'rgb_exposure_stats': {'mean': 173.46417172749838, 'min': 55, 'max': 223, 'range': 168, 'stddev': 29.744353957723053, 'edge_mean': 2.371382395426432, 'sat250_fraction': 0.0, 'dark5_fraction': 0.0}, 'mask_foreground_stats': {'threshold': 127, 'foreground_pixels': 78, 'total_pixels': 1572864, 'foreground_fraction': 4.9591064453125e-05}, 'passed': False}"
+      ]
+    }
+  ],
+  "target_profile": {
+    "model_id": "QC7-5244",
+    "appearance_color": "white",
+    "blend_path": "assets/models/moxing1_test.blend",
+    "stl_path": "assets/models/QC7-5236.stl",
+    "material_source": {
+      "mode": "embedded_or_backend_default"
+    },
+    "preferred_backends": {
+      "black_dot": "reference_blackdot",
+      "mixed_color_contamination": "qc75244_mixed_color_debug",
+      "default": "generic_main_plane"
+    },
+    "supported_defects": [
+      "black_dot",
+      "mixed_color_contamination"
+    ],
+    "default_anchor_sides": [
+      "front",
+      "back"
+    ],
+    "placement_policy": "front_back_main_planes_only",
+    "notes": [
+      "QC7-5236.stl is the geometry asset currently used for the QC7-5244 target.",
+      "The STL does not carry an accepted authored material; white appearance is constructed by the reference/generic scripts.",
+      "The historical backend key QC75244_white is retained for compatibility with reference_blend_blackdot_multi_model.py."
+    ],
+    "target_id": "qc7_5244_white"
+  },
+  "model_profile": "qc7_5244_white",
+  "defect_type": "mixed_color_contamination",
+  "anchor_sides": [
+    "front"
+  ],
+  "seeds_used": [
+    81400
+  ],
+  "render_samples": 16,
+  "placement_policy": "front_back_main_planes_only",
+  "material_source": {
+    "mode": "embedded_or_backend_default"
+  },
+  "defect_generation_logic": {
+    "backend": "qc75244_mixed_color_profile",
+    "reference_script": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\reference_blend_qc75244_mixed_color_profile_debug.py",
+    "uses_reference_defect_functions": true
+  },
+  "camera": {
+    "mode": "randomized",
+    "profile": "light_domain_randomization_v1",
+    "distance_base": 2.2,
+    "distance_jitter_factor": [
+      -0.05,
+      0.05
+    ],
+    "distance_range": [
+      2.09,
+      2.31
+    ],
+    "azimuth_degrees": [
+      -15,
+      15
+    ],
+    "elevation_degrees": [
+      -10,
+      10
+    ],
+    "roll_degrees": [
+      -5,
+      5
+    ],
+    "focal_length_mm": [
+      65,
+      75
+    ],
+    "override_policy": "User-supplied values or ranges replace these defaults per profile or CLI config."
+  },
+  "lighting": {
+    "mode": "randomized",
+    "profile": "light_domain_randomization_v1",
+    "strength_base": 450,
+    "strength_jitter_factor": [
+      -0.2,
+      0.2
+    ],
+    "strength_range": [
+      360,
+      540
+    ],
+    "direction_jitter_degrees": [
+      -8,
+      8
+    ],
+    "area_size_base": 3.0,
+    "area_size_range": [
+      2.7,
+      3.3
+    ],
+    "background_brightness_base": 0.78,
+    "background_brightness_range": [
+      0.72,
+      0.84
+    ],
+    "override_policy": "User-supplied values or ranges replace these defaults per profile or CLI config."
+  },
+  "background": {
+    "mode": "randomized",
+    "profile": "light_domain_randomization_v1",
+    "color_base": [
+      0.78,
+      0.78,
+      0.78,
+      1.0
+    ],
+    "color_jitter_rgb": [
+      -0.03,
+      0.03
+    ],
+    "color_range_rgb": [
+      [
+        0.75,
+        0.81
+      ],
+      [
+        0.75,
+        0.81
+      ],
+      [
+        0.75,
+        0.81
+      ]
+    ],
+    "override_policy": "User-supplied color or RGB ranges replace these defaults per profile or CLI config."
+  },
+  "samples": [],
+  "backend_log": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_white\\mixed_color_contamination\\side_front\\backend_run_log.json",
+  "quality_goal": "coverage_first_not_visual_realism"
+}

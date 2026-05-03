@@ -1,0 +1,171 @@
+{
+  "schema_version": "generic_main_plane_cooccurrence_v0.1",
+  "script": "E:\\BlenderProject\\BlenderProc\\defect_dataset_generator\\blender_scripts\\render_generic_main_plane_defects.py",
+  "target": "qc7_5244_black",
+  "defect_types": [
+    "foreign_material",
+    "splay"
+  ],
+  "placement_policy": "front_back_main_planes_only",
+  "main_plane_axis_policy": "bbox_shortest_axis_as_front_back_normal",
+  "product_bbox": {
+    "min": [
+      -240.0,
+      -106.5999984741211,
+      90.30000305175781
+    ],
+    "max": [
+      104.946533203125,
+      188.2968292236328,
+      128.5017852783203
+    ],
+    "dims": [
+      344.946533203125,
+      294.8968200683594,
+      38.2017822265625
+    ],
+    "main_plane_axis": "z"
+  },
+  "scene_profile": {
+    "uses_existing_camera": false,
+    "existing_camera": null,
+    "force_generic_camera": true,
+    "force_generic_lighting": false,
+    "uses_existing_lights": true,
+    "existing_lights": [
+      "Area",
+      "Area.001",
+      "Area.002",
+      "Area.003",
+      "Area.004"
+    ],
+    "fallback_policy": "reuse_existing_scene_first_else_generic_camera_light; imported STL forces generic camera"
+  },
+  "source_paths": {
+    "blend": "E:\\BlenderProject\\BlenderProc\\assets\\models\\moxing1_test.blend",
+    "stl": "E:\\BlenderProject\\BlenderProc\\assets\\models\\QC7-5236.stl",
+    "model_blend": null
+  },
+  "render_width": 1536,
+  "render_height": 1024,
+  "cycles_samples": 16,
+  "render_device_info": {
+    "requested": true,
+    "render_engine": "CYCLES",
+    "cycles_device": "GPU",
+    "compute_device_type": "OPTIX",
+    "enabled_devices": [
+      {
+        "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+        "type": "OPTIX"
+      },
+      {
+        "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+        "type": "CUDA"
+      }
+    ],
+    "gpu_enabled": true,
+    "fallback": null
+  },
+  "seed": 81710,
+  "object_transform_mode": "none",
+  "cooccurrence_iou_threshold": 0.15,
+  "samples": [
+    {
+      "image_id": 0,
+      "rgb": "rgb\\000000.png",
+      "mask": "masks\\000000.png",
+      "label_yolo": "labels_yolo\\000000.txt",
+      "metadata": "metadata\\000000.json",
+      "defects": [
+        {
+          "defect_type": "foreign_material",
+          "class_id": 1,
+          "bbox": {
+            "xywh": [
+              995,
+              648,
+              13,
+              8
+            ],
+            "xyxy": [
+              995,
+              648,
+              1008,
+              656
+            ],
+            "area_pixels": 104
+          },
+          "anchor_side": "back",
+          "main_plane_axis": "z",
+          "placement_policy": "front_back_main_planes_only",
+          "mask_by_class": null,
+          "placement_warning": null
+        },
+        {
+          "defect_type": "splay",
+          "class_id": 2,
+          "bbox": {
+            "xywh": [
+              527,
+              332,
+              8,
+              62
+            ],
+            "xyxy": [
+              527,
+              332,
+              535,
+              394
+            ],
+            "area_pixels": 496
+          },
+          "anchor_side": "back",
+          "main_plane_axis": "z",
+          "placement_policy": "front_back_main_planes_only",
+          "mask_by_class": null,
+          "placement_warning": null
+        }
+      ],
+      "defect_types": [
+        "foreign_material",
+        "splay"
+      ],
+      "anchor_side": "back",
+      "view_transform": {
+        "enabled": false,
+        "mode": "none",
+        "camera_moved_for_defect_side": true,
+        "camera_side": "back",
+        "physical_anchor_side": "back",
+        "rotation_degrees_xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "translation_xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pivot_policy": "product_bbox_center",
+        "environment_transform": "none",
+        "default_backside_operation": false
+      },
+      "generic_backend": true,
+      "generation_mode": "multi_defect_cooccurrence",
+      "quality_goal": "cooccurrence_proof_first_not_visual_realism",
+      "seed": 81710
+    }
+  ],
+  "notes": [
+    "Each RGB image contains all listed defect types in one scene.",
+    "masks is the merged binary mask; masks_by_class is only written when --render_class_masks is enabled."
+  ],
+  "mask_output_policy": {
+    "merged_mask": true,
+    "class_masks": false,
+    "class_masks_default": false
+  },
+  "defaults_registry": "E:\\BlenderProject\\BlenderProc\\defect_dataset_generator\\config\\generation_defaults_registry.json"
+}

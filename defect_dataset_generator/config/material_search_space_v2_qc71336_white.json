@@ -1,0 +1,43 @@
+{
+  "schema_version": "0.2",
+  "profile_name": "qc71336_white_plastic_v2_diagnostic",
+  "purpose": "Reduce brightness and cool-blue color drift observed in fit_plastic_mask_roi_20_v2 for QC71336 white plastic visual calibration.",
+  "notes": [
+    "This search space is for visual material calibration, not physical BRDF recovery.",
+    "Material parameters are separated from scene calibration parameters.",
+    "The previous best candidate used base_color [0.76, 0.80, 0.86, 1.0], which scored lower mainly on brightness_similarity and color_similarity.",
+    "Avoid overly blue and overly bright candidates; keep candidates near neutral or slightly warm white."
+  ],
+  "material_parameters": {
+    "base_color": [
+      [0.78, 0.78, 0.76, 1.0],
+      [0.80, 0.80, 0.78, 1.0],
+      [0.82, 0.81, 0.78, 1.0],
+      [0.84, 0.83, 0.80, 1.0],
+      [0.80, 0.81, 0.80, 1.0],
+      [0.82, 0.82, 0.81, 1.0]
+    ],
+    "roughness": [0.42, 0.55, 0.68],
+    "specular": [0.18, 0.28, 0.38],
+    "alpha": [1.0],
+    "subsurface": [0.0],
+    "noise_scale": [48.0, 72.0, 96.0],
+    "noise_strength": [0.0, 0.008, 0.015],
+    "bump_strength": [0.0, 0.006, 0.012]
+  },
+  "scene_calibration": {
+    "light_strength": [360.0, 400.0, 430.0, 450.0],
+    "exposure": [-0.12, -0.06, 0.0],
+    "background_color": [
+      [0.74, 0.74, 0.74, 1.0],
+      [0.78, 0.78, 0.78, 1.0]
+    ],
+    "camera_profile": ["deterministic_ortho_front"],
+    "render_resolution": [[512, 384]]
+  },
+  "recommended_scoring": {
+    "score_profile": "plastic_material",
+    "roi_mode": "mask",
+    "roi_requirement": "Use the clean QC71336 plastic ROI mask and do not include black_spot defect pixels in material fitting."
+  }
+}

@@ -1,0 +1,174 @@
+{
+  "schema_version": "0.3",
+  "profile_name": "qc7_5244_black_surface_texture_profile_v1",
+  "model_id": "QC7-5244",
+  "appearance_color": "black",
+  "profile_type": "surface_texture_material_profile",
+  "status": "prepared_not_wired_as_default",
+  "purpose": "QC7-5244 black clean-surface material and texture profile based on normal real images. This profile separates the base plastic appearance into matte fine-grain plastic, ribbed border plastic, and smoother semi-gloss structural plastic.",
+  "reference_images": {
+    "source_folder": "E:/BlenderProject/BlenderProc/plastic_real_dataset/QC7-5244_black/QC9-0852_normal",
+    "actual_local_folder": "E:/BlenderProject/BlenderProc/\u5851\u6599\u5de5\u4ef6\u771f\u5b9e\u6570\u636e\u96c6/QC7-5244\u9ed1\u8272/QC9-0852-\u6b63\u5e38",
+    "reviewed_example": "9K9A0793.JPG",
+    "visual_observations": [
+      "The main broad panel is a dark cool-gray/black molded plastic with very fine matte grain.",
+      "The raised tray and large flat panel show broad soft highlights, not glossy mirror highlights.",
+      "The left/top/bottom border bands contain dense regular ribbed or grid-like texture, darker than the main panel.",
+      "Rounded recesses, latches, and small molded structures are smoother and more semi-gloss than the main matte panel.",
+      "Texture should belong to the clean material profile and should not be emitted as defect masks."
+    ]
+  },
+  "renderer_compatibility": {
+    "current_generic_renderer_consumes": [
+      "material_parameters.base_color",
+      "material_parameters.roughness",
+      "material_parameters.specular",
+      "material_parameters.specular_ior_level",
+      "material_parameters.alpha"
+    ],
+    "current_generic_renderer_partially_ignores": [
+      "material_parameters.noise_scale",
+      "material_parameters.noise_strength",
+      "material_parameters.bump_strength",
+      "surface_regions",
+      "procedural_texture_layers"
+    ],
+    "note": "This file is complete as the v1 profile spec. The single global material_parameters block is immediately compatible with the current generic backend. Region-specific procedural texture layers require later shader/region assignment support."
+  },
+  "material_parameters": {
+    "base_color": [0.070, 0.078, 0.090, 1.0],
+    "roughness": 0.78,
+    "specular": 0.22,
+    "specular_ior_level": 0.22,
+    "alpha": 1.0,
+    "subsurface": 0.0,
+    "noise_scale": 150.0,
+    "noise_strength": 0.012,
+    "bump_strength": 0.010,
+    "bump_distance": 0.018
+  },
+  "surface_regions": {
+    "main_fine_matte_plastic": {
+      "role": "default broad panel, inset tray, large smooth defect-capable areas",
+      "assignment_priority": 10,
+      "base_color": [0.070, 0.078, 0.090, 1.0],
+      "roughness": 0.78,
+      "specular_ior_level": 0.22,
+      "procedural_texture": {
+        "type": "fine_noise_bump",
+        "noise_scale": 150.0,
+        "noise_detail": 12.0,
+        "noise_roughness": 0.58,
+        "bump_strength": 0.010,
+        "bump_distance": 0.018,
+        "color_variation_strength": 0.018,
+        "low_frequency_variation_scale": 18.0,
+        "low_frequency_variation_strength": 0.010
+      }
+    },
+    "ribbed_border_plastic": {
+      "role": "left vertical band plus top and bottom textured border bands",
+      "assignment_priority": 30,
+      "base_color": [0.045, 0.052, 0.062, 1.0],
+      "roughness": 0.72,
+      "specular_ior_level": 0.18,
+      "procedural_texture": {
+        "type": "directional_wave_grid_bump",
+        "primary_wave_scale": 110.0,
+        "secondary_wave_scale": 22.0,
+        "primary_bump_strength": 0.034,
+        "secondary_bump_strength": 0.010,
+        "bump_distance": 0.028,
+        "direction_policy": {
+          "left_band": "vertical_ribs",
+          "top_band": "horizontal_ribs",
+          "bottom_band": "horizontal_ribs"
+        },
+        "grid_mix_strength": 0.28
+      },
+      "initial_region_hints_normalized_bbox": [
+        {
+          "name": "left_ribbed_band",
+          "x_range": [0.00, 0.14],
+          "y_range": [0.04, 0.96],
+          "side": "back_or_main_visible_face"
+        },
+        {
+          "name": "top_ribbed_band",
+          "x_range": [0.10, 0.96],
+          "y_range": [0.86, 1.00],
+          "side": "back_or_main_visible_face"
+        },
+        {
+          "name": "bottom_ribbed_band",
+          "x_range": [0.14, 0.96],
+          "y_range": [0.00, 0.12],
+          "side": "back_or_main_visible_face"
+        }
+      ]
+    },
+    "semi_gloss_structural_plastic": {
+      "role": "rounded recesses, circular gate area, latches, hooks, and small molded structures",
+      "assignment_priority": 20,
+      "base_color": [0.058, 0.064, 0.074, 1.0],
+      "roughness": 0.46,
+      "specular_ior_level": 0.45,
+      "procedural_texture": {
+        "type": "very_subtle_noise_bump",
+        "noise_scale": 90.0,
+        "noise_detail": 6.0,
+        "bump_strength": 0.003,
+        "bump_distance": 0.006,
+        "color_variation_strength": 0.006
+      }
+    },
+    "deep_shadow_inner_parts": {
+      "role": "deep cavities and occluded inner walls",
+      "assignment_priority": 40,
+      "base_color": [0.026, 0.030, 0.036, 1.0],
+      "roughness": 0.62,
+      "specular_ior_level": 0.28,
+      "procedural_texture": {
+        "type": "minimal_noise_bump",
+        "noise_scale": 70.0,
+        "bump_strength": 0.002,
+        "bump_distance": 0.004
+      }
+    }
+  },
+  "region_assignment_strategy": {
+    "preferred": "object_or_material_slot_name_if_available",
+    "fallback": "normalized_bbox_and_surface_normal_rules",
+    "do_not_mask_as_defect": true,
+    "notes": [
+      "If the STL exposes separate objects or material slots for border bands, assign ribbed_border_plastic there first.",
+      "If the STL is a single mesh, use coordinate windows for the border bands and normal-facing main planes for the main matte material.",
+      "Rounded recesses and small molded structures can initially remain on the global material until mesh-region assignment is implemented."
+    ]
+  },
+  "scene_calibration": {
+    "light_strength": 820.0,
+    "exposure": 0.02,
+    "camera_profile": "deterministic_ortho_or_reference_oblique",
+    "render_resolution": [1536, 1024],
+    "background_color": [0.72, 0.72, 0.70, 1.0],
+    "domain_randomization_defaults": {
+      "light_strength_jitter": 0.20,
+      "light_direction_degrees": 6.0,
+      "camera_angle_degrees": 8.0,
+      "camera_distance_jitter": 0.04,
+      "background_color_jitter": 0.025
+    }
+  },
+  "acceptance_checks": [
+    "Main panel should read as dark cool-gray black, not pure black.",
+    "Main panel should show fine matte grain without obvious large noise blobs.",
+    "Border bands should show regular ribbed/grid texture and be slightly darker than the main panel.",
+    "Rounded recess and molded features should keep clearer highlights than the main panel.",
+    "Clean texture must not be included in defect masks or labels."
+  ],
+  "next_integration_step": {
+    "safe_option_without_touching_other_files": "Use material_parameters as a drop-in manual material candidate when invoking a renderer that accepts an explicit material profile path.",
+    "full_option_requires_code_changes": "Teach render_generic_main_plane_defects.py to consume surface_regions and assign procedural materials by object/material slot or normalized coordinate windows."
+  }
+}

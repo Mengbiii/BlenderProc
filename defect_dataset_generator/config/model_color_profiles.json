@@ -1,0 +1,125 @@
+{
+  "schema_version": "0.1",
+  "description": "Model-color profiles for first-pass dataset generation coverage. These profiles prioritize runnable generation over visual realism.",
+  "profiles": {
+    "p101040_blue": {
+      "model_id": "P101040",
+      "appearance_color": "blue",
+      "blend_path": "assets/models/moxing2.blend",
+      "stl_path": "assets/models/P101040.stl",
+      "material_source": {"mode": "embedded_or_backend_default"},
+      "preferred_backends": {
+        "black_dot": "reference_blackdot",
+        "default": "generic_main_plane"
+      },
+      "supported_defects": ["black_dot"],
+      "default_anchor_sides": ["front"],
+      "placement_policy": "front_back_main_planes_only"
+    },
+    "qc71336_black": {
+      "model_id": "QC71336",
+      "appearance_color": "black",
+      "blend_path": "assets/models/moxing2.blend",
+      "model_blend_path": "assets/models/QC7-1336-black.blend",
+      "stl_path": "assets/models/QC7-1336.stl",
+      "material_source": {"mode": "embedded_in_model_blend"},
+      "preferred_backends": {
+        "foreign_material": "qc71336_black_debug",
+        "splay": "qc71336_black_debug",
+        "default": "generic_main_plane"
+      },
+      "supported_defects": ["foreign_material", "splay"],
+      "default_anchor_sides": ["front", "back"],
+      "placement_policy": "front_back_main_planes_only"
+    },
+    "qc71336_white": {
+      "model_id": "QC71336",
+      "appearance_color": "white",
+      "blend_path": "assets/models/moxing2.blend",
+      "model_blend_path": "assets/models/QC7-1336-white.blend",
+      "stl_path": "assets/models/QC7-1336.stl",
+      "material_source": {"mode": "embedded_in_model_blend"},
+      "preferred_backends": {
+        "black_dot": "reference_blackdot",
+        "foreign_material": "qc71336_white_reference",
+        "default": "generic_main_plane"
+      },
+      "supported_defects": ["black_dot", "foreign_material"],
+      "default_anchor_sides": ["front", "back"],
+      "placement_policy": "front_back_main_planes_only"
+    },
+    "qc71336_gray": {
+      "model_id": "QC71336",
+      "appearance_color": "gray",
+      "blend_path": "assets/models/moxing2.blend",
+      "model_blend_path": "assets/models/QC7-1336-white.blend",
+      "stl_path": "assets/models/QC7-1336.stl",
+      "material_source": {"mode": "qc71336_gray_reference_override"},
+      "preferred_backends": {
+        "black_dot": "reference_blackdot",
+        "mixed_color_contamination": "generic_main_plane",
+        "default": "generic_main_plane"
+      },
+      "supported_defects": ["black_dot", "mixed_color_contamination"],
+      "default_anchor_sides": ["front", "back"],
+      "placement_policy": "front_back_main_planes_only"
+    },
+    "qc7_5244_black": {
+      "model_id": "QC7-5244",
+      "appearance_color": "black",
+      "blend_path": "assets/models/moxing1_test.blend",
+      "stl_path": "assets/models/QC7-5236.stl",
+      "material_source": {"mode": "manual_profile", "path": "defect_dataset_generator/config/qc7_5244_black_visual_material_candidate_v3.json"},
+      "preferred_backends": {
+        "black_dot": "generic_main_plane",
+        "foreign_material": "generic_main_plane",
+        "splay": "generic_main_plane",
+        "default": "generic_main_plane"
+      },
+      "supported_defects": ["black_dot", "foreign_material", "splay"],
+      "default_anchor_sides": ["back"],
+      "placement_policy": "front_back_main_planes_only",
+      "notes": [
+        "QC7-5236.stl is the geometry asset currently used for the QC7-5244 target.",
+        "The STL does not carry an accepted authored material; black appearance is constructed from defect_dataset_generator/config/qc7_5244_black_visual_material_candidate_v3.json.",
+        "This profile is smoke-ready for coverage generation, not final realism acceptance."
+      ]
+    },
+    "qc7_5244_white": {
+      "model_id": "QC7-5244",
+      "appearance_color": "white",
+      "blend_path": "assets/models/moxing1_test.blend",
+      "stl_path": "assets/models/QC7-5236.stl",
+      "material_source": {"mode": "embedded_or_backend_default"},
+      "preferred_backends": {
+        "black_dot": "reference_blackdot",
+        "mixed_color_contamination": "qc75244_mixed_color_debug",
+        "default": "generic_main_plane"
+      },
+      "supported_defects": ["black_dot", "mixed_color_contamination"],
+      "default_anchor_sides": ["front", "back"],
+      "placement_policy": "front_back_main_planes_only",
+      "notes": [
+        "QC7-5236.stl is the geometry asset currently used for the QC7-5244 target.",
+        "The STL does not carry an accepted authored material; white appearance is constructed by the reference/generic scripts.",
+        "The historical backend key QC75244_white is retained for compatibility with reference_blend_blackdot_multi_model.py."
+      ]
+    },
+    "ql3_1052_black": {
+      "model_id": "QL3-1052",
+      "appearance_color": "black",
+      "blend_path": "assets/models/QL3-black.blend",
+      "material_source": {"mode": "embedded_in_blend"},
+      "force_generic_camera": true,
+      "force_generic_lighting": true,
+      "preferred_backends": {
+        "foreign_material": "generic_main_plane",
+        "splay": "generic_main_plane",
+        "default": "generic_main_plane"
+      },
+      "supported_defects": ["foreign_material", "splay"],
+      "default_anchor_sides": ["front", "side"],
+      "placement_policy": "ql3_front_and_side_flat_planes_only_no_back"
+    }
+  }
+}

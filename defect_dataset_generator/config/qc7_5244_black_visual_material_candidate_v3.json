@@ -1,0 +1,33 @@
+{
+  "schema_version": "0.2",
+  "calibration_type": "visual_material_candidate_manual_v3",
+  "description": "QC7-5244 black procedural material candidate based on real defect/normal image visual inspection. Avoids transferred image textures and uses subtle procedural grain only.",
+  "model_id": "QC7-5244",
+  "appearance_color": "black",
+  "material_parameters": {
+    "base_color": [0.052, 0.060, 0.073, 1.0],
+    "roughness": 0.80,
+    "specular": 0.20,
+    "subsurface": 0.0,
+    "noise_scale": 180.0,
+    "noise_strength": 0.008,
+    "bump_strength": 0.002,
+    "alpha": 1.0,
+    "specular_ior_level": 0.20,
+    "translucency": 0.0
+  },
+  "placement_control": {
+    "use_preset_safe_anchor_windows": true,
+    "notes": [
+      "Constrain black-dot anchor to the QC7-5244 main flat safe-zone for visual inspection.",
+      "Avoid transferred QC71336 texture maps because they caused UV-scale streaks on QC7-5244."
+    ]
+  },
+  "scene_calibration": {
+    "light_strength": 988.0,
+    "exposure": -0.10,
+    "camera_profile": "deterministic_ortho_front",
+    "render_resolution": [1536, 1024],
+    "background_color": [0.72, 0.72, 0.72, 1.0]
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "backend_script": "E:\\BlenderProject\\BlenderProc\\defect_dataset_generator\\blender_scripts\\render_generic_main_plane_defects.py",
+  "output_folder": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_back",
+  "target_profile": {
+    "model_id": "QC7-5244",
+    "appearance_color": "black",
+    "blend_path": "assets/models/moxing1_test.blend",
+    "stl_path": "assets/models/QC7-5236.stl",
+    "material_source": {
+      "mode": "manual_profile",
+      "path": "defect_dataset_generator/config/qc7_5244_black_visual_material_candidate_v3.json"
+    },
+    "preferred_backends": {
+      "black_dot": "generic_main_plane",
+      "foreign_material": "generic_main_plane",
+      "splay": "generic_main_plane",
+      "default": "generic_main_plane"
+    },
+    "supported_defects": [
+      "black_dot",
+      "foreign_material",
+      "splay"
+    ],
+    "default_anchor_sides": [
+      "back"
+    ],
+    "placement_policy": "front_back_main_planes_only",
+    "notes": [
+      "QC7-5236.stl is the geometry asset currently used for the QC7-5244 target.",
+      "The STL does not carry an accepted authored material; black appearance is constructed from defect_dataset_generator/config/qc7_5244_black_visual_material_candidate_v3.json.",
+      "This profile is smoke-ready for coverage generation, not final realism acceptance."
+    ],
+    "target_id": "qc7_5244_black"
+  },
+  "defect_types": [
+    "foreign_material",
+    "splay"
+  ],
+  "defect_generation_logic": {
+    "backend": "generic_main_plane_cooccurrence",
+    "shared_single_generic_function": "render_generic_main_plane_defects.create_defect",
+    "position_resampling_only": true,
+    "note": "Each defect object is created by the same generic create_defect() used by generic single-defect generation; cooccurrence only repeats sampling to avoid excessive overlap."
+  },
+  "object_transform_mode": "none",
+  "object_transform_camera_side": "front",
+  "object_rotate_deg": null,
+  "object_translate": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "mask_output_policy": {
+    "merged_mask": true,
+    "class_masks": false,
+    "class_masks_default": false
+  },
+  "command": [
+    "D:\\Anaconda\\envs\\defect_eval\\python.exe",
+    "E:\\BlenderProject\\BlenderProc\\cli.py",
+    "run",
+    "E:\\BlenderProject\\BlenderProc\\defect_dataset_generator\\blender_scripts\\render_generic_main_plane_defects.py",
+    "--",
+    "--target",
+    "qc7_5244_black",
+    "--defect_type",
+    "foreign_material",
+    "--cooccurrence_defects",
+    "foreign_material",
+    "splay",
+    "--output",
+    "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_back",
+    "--num",
+    "1",
+    "--start_index",
+    "0",
+    "--samples",
+    "16",
+    "--seed",
+    "81710",
+    "--anchor_sides",
+    "back",
+    "--blend",
+    "E:\\BlenderProject\\BlenderProc\\assets\\models\\moxing1_test.blend",
+    "--stl",
+    "E:\\BlenderProject\\BlenderProc\\assets\\models\\QC7-5236.stl",
+    "--force_generic_camera",
+    "--material_profile",
+    "E:\\BlenderProject\\BlenderProc\\defect_dataset_generator\\config\\qc7_5244_black_visual_material_candidate_v3.json"
+  ],
+  "dry_run": false,
+  "failure_reason": null,
+  "returncode": 0,
+  "stdout": "Blender 4.2.1 LTS (hash 396f546c9d82 built 2024-08-19 11:29:52)\nRead blend: \"E:\\BlenderProject\\BlenderProc\\assets\\models\\moxing1_test.blend\"\nSTL Importer: 6 degenerate triangles were removed\nSTL Importer: 2 duplicate triangles were removed\nTimer 'STL Import' took 38.66 ms\nFra:1 Mem:86.07M (Peak 86.07M) | Time:00:01.66 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | GENERIC_TARGET_qc7_5244_black\nFra:1 Mem:86.07M (Peak 86.07M) | Time:00:01.66 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | GENERIC_DEFECT_FOREIGN_00\nFra:1 Mem:87.30M (Peak 87.30M) | Time:00:01.66 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | GENERIC_DEFECT_SPLAY\nFra:1 Mem:95.25M (Peak 96.07M) | Time:00:01.66 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:94.73M (Peak 96.07M) | Time:00:01.66 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:94.73M (Peak 96.07M) | Time:00:01.66 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:94.73M (Peak 123.11M) | Time:00:03.68 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:94.73M (Peak 123.11M) | Time:00:03.68 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:94.82M (Peak 123.11M) | Time:00:03.68 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:94.82M (Peak 123.11M) | Time:00:03.68 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Background\nFra:1 Mem:94.82M (Peak 123.11M) | Time:00:03.68 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:94.82M (Peak 123.11M) | Time:00:03.68 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:94.82M (Peak 123.11M) | Time:00:03.68 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:94.82M (Peak 123.11M) | Time:00:03.68 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:94.82M (Peak 123.11M) | Time:00:03.68 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:94.82M (Peak 123.11M) | Time:00:03.68 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:94.82M (Peak 123.11M) | Time:00:03.68 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:94.82M (Peak 123.11M) | Time:00:03.68 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:96.47M (Peak 123.11M) | Time:00:03.69 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:97.09M (Peak 123.11M) | Time:00:03.69 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:97.09M (Peak 123.11M) | Time:00:03.69 | Mem:0.63M, Peak:0.63M | Scene, ViewLayer | Updating Geometry BVH GENERIC_DEFECT_SPLAY_MESH 5/5 | Building BVH\nFra:1 Mem:97.09M (Peak 123.11M) | Time:00:03.69 | Mem:0.63M, Peak:0.63M | Scene, ViewLayer | Updating Geometry BVH GENERIC_DEFECT_SPLAY_MESH 5/5 | Building OptiX acceleration structure\nFra:1 Mem:97.11M (Peak 123.11M) | Time:00:03.69 | Mem:0.63M, Peak:0.63M | Scene, ViewLayer | Updating Geometry BVH GENERIC_DEFECT_FOREIGN_01_MESH 4/5 | Building BVH\nFra:1 Mem:97.11M (Peak 123.11M) | Time:00:03.69 | Mem:0.64M, Peak:0.64M | Scene, ViewLayer | Updating Geometry BVH GENERIC_DEFECT_FOREIGN_01_MESH 4/5 | Building OptiX acceleration structure\nFra:1 Mem:97.11M (Peak 123.11M) | Time:00:03.69 | Mem:0.64M, Peak:0.64M | Scene, ViewLayer | Updating Geometry BVH QC7-5236 1/5 | Building BVH\nFra:1 Mem:97.11M (Peak 123.11M) | Time:00:03.69 | Mem:0.65M, Peak:0.65M | Scene, ViewLayer | Updating Geometry BVH QC7-5236 1/5 | Building OptiX acceleration structure\nFra:1 Mem:97.09M (Peak 123.11M) | Time:00:03.70 | Mem:2.94M, Peak:10.71M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:97.09M (Peak 123.11M) | Time:00:03.70 | Mem:2.94M, Peak:10.71M | Scene, ViewLayer | Updating Scene BVH | Building OptiX acceleration structure\nFra:1 Mem:97.09M (Peak 123.11M) | Time:00:03.70 | Mem:2.94M, Peak:10.71M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:97.09M (Peak 123.11M) | Time:00:03.70 | Mem:2.94M, Peak:10.71M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:100.81M (Peak 123.11M) | Time:00:03.70 | Mem:2.94M, Peak:10.71M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:100.81M (Peak 123.11M) | Time:00:03.70 | Mem:6.66M, Peak:10.71M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:100.81M (Peak 123.11M) | Time:00:03.70 | Mem:6.66M, Peak:10.71M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:100.81M (Peak 123.11M) | Time:00:03.70 | Mem:6.66M, Peak:10.71M | Scene, ViewLayer | Updating Images\nFra:1 Mem:100.81M (Peak 123.11M) | Time:00:03.70 | Mem:6.66M, Peak:10.71M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:100.81M (Peak 123.11M) | Time:00:03.70 | Mem:6.66M, Peak:10.71M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:100.81M (Peak 123.11M) | Time:00:03.70 | Mem:6.74M, Peak:10.71M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:100.81M (Peak 123.11M) | Time:00:03.70 | Mem:6.74M, Peak:10.71M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:100.81M (Peak 123.11M) | Time:00:03.70 | Mem:6.74M, Peak:10.71M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:100.81M (Peak 123.11M) | Time:00:03.70 | Mem:6.74M, Peak:10.71M | Scene, ViewLayer | Updating Film\nFra:1 Mem:100.82M (Peak 123.11M) | Time:00:03.70 | Mem:6.66M, Peak:10.71M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:100.82M (Peak 123.11M) | Time:00:03.70 | Mem:6.74M, Peak:10.71M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:100.82M (Peak 123.11M) | Time:00:03.70 | Mem:6.74M, Peak:10.71M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:100.82M (Peak 123.11M) | Time:00:03.70 | Mem:6.74M, Peak:10.71M | Scene, ViewLayer | Loading denoising kernels (may take a few minutes the first time)\nFra:1 Mem:104.82M (Peak 123.11M) | Time:00:03.71 | Mem:350.75M, Peak:350.75M | Scene, ViewLayer | Sample 0/16\nFra:1 Mem:218.82M (Peak 218.82M) | Time:00:03.76 | Remaining:00:00.62 | Mem:464.75M, Peak:464.75M | Scene, ViewLayer | Sample 1/16\nFra:1 Mem:266.83M (Peak 338.83M) | Time:00:08.41 | Mem:464.75M, Peak:464.75M | Scene, ViewLayer | Sample 16/16\nFra:1 Mem:266.83M (Peak 338.83M) | Time:00:08.41 | Mem:464.75M, Peak:464.75M | Scene, ViewLayer | Finished\nSaved: 'E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_back\\rgb\\000000.png'\nTime: 00:08.61 (Saving: 00:00.13)\n\nFra:1 Mem:90.41M (Peak 90.41M) | Time:00:01.59 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | GENERIC_TARGET_qc7_5244_black\nFra:1 Mem:90.41M (Peak 90.41M) | Time:00:01.59 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | GENERIC_DEFECT_SPLAY\nFra:1 Mem:93.82M (Peak 93.82M) | Time:00:01.59 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:93.42M (Peak 93.82M) | Time:00:01.59 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:93.42M (Peak 93.82M) | Time:00:01.59 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:93.42M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:93.42M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:93.51M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:93.51M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Background\nFra:1 Mem:93.51M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:93.51M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:93.51M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:93.51M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:93.51M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:93.51M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:93.51M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:93.51M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:95.16M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:95.16M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:95.16M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Geometry BVH GENERIC_DEFECT_SPLAY_MESH 5/5 | Building BVH\nFra:1 Mem:95.16M (Peak 121.80M) | Time:00:03.53 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Geometry BVH GENERIC_DEFECT_SPLAY_MESH 5/5 | Building OptiX acceleration structure\nFra:1 Mem:95.18M (Peak 121.80M) | Time:00:03.53 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Geometry BVH GENERIC_DEFECT_FOREIGN_00_MESH 3/5 | Building BVH\nFra:1 Mem:95.18M (Peak 121.80M) | Time:00:03.53 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Geometry BVH GENERIC_DEFECT_FOREIGN_01_MESH 4/5 | Building OptiX acceleration structure\nFra:1 Mem:95.18M (Peak 121.80M) | Time:00:03.53 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Geometry BVH QC7-5236 1/5 | Building BVH\nFra:1 Mem:95.18M (Peak 121.80M) | Time:00:03.53 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Geometry BVH QC7-5236 1/5 | Building OptiX acceleration structure\nFra:1 Mem:95.16M (Peak 121.80M) | Time:00:03.54 | Mem:2.31M, Peak:10.09M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:95.16M (Peak 121.80M) | Time:00:03.54 | Mem:2.31M, Peak:10.09M | Scene, ViewLayer | Updating Scene BVH | Building OptiX acceleration structure\nFra:1 Mem:95.16M (Peak 121.80M) | Time:00:03.54 | Mem:2.32M, Peak:10.09M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:95.16M (Peak 121.80M) | Time:00:03.54 | Mem:2.32M, Peak:10.09M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:98.88M (Peak 121.80M) | Time:00:03.54 | Mem:2.32M, Peak:10.09M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:98.88M (Peak 121.80M) | Time:00:03.54 | Mem:6.03M, Peak:10.09M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:98.88M (Peak 121.80M) | Time:00:03.54 | Mem:6.03M, Peak:10.09M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:98.88M (Peak 121.80M) | Time:00:03.54 | Mem:6.03M, Peak:10.09M | Scene, ViewLayer | Updating Images\nFra:1 Mem:98.88M (Peak 121.80M) | Time:00:03.54 | Mem:6.03M, Peak:10.09M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:98.88M (Peak 121.80M) | Time:00:03.54 | Mem:6.03M, Peak:10.09M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:98.88M (Peak 121.80M) | Time:00:03.54 | Mem:6.12M, Peak:10.09M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:98.88M (Peak 121.80M) | Time:00:03.54 | Mem:6.12M, Peak:10.09M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:99.02M (Peak 121.80M) | Time:00:03.55 | Mem:6.26M, Peak:10.09M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:99.02M (Peak 121.80M) | Time:00:03.55 | Mem:6.26M, Peak:10.09M | Scene, ViewLayer | Updating Film\nFra:1 Mem:99.03M (Peak 121.80M) | Time:00:03.55 | Mem:6.18M, Peak:10.09M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:99.03M (Peak 121.80M) | Time:00:03.55 | Mem:6.27M, Peak:10.09M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:99.03M (Peak 121.80M) | Time:00:03.55 | Mem:6.27M, Peak:10.09M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:99.03M (Peak 121.80M) | Time:00:03.55 | Mem:6.27M, Peak:10.09M | Scene, ViewLayer | Loading denoising kernels (may take a few minutes the first time)\nFra:1 Mem:103.03M (Peak 121.80M) | Time:00:03.56 | Mem:350.27M, Peak:350.27M | Scene, ViewLayer | Sample 0/16\nFra:1 Mem:217.03M (Peak 217.03M) | Time:00:03.58 | Remaining:00:00.21 | Mem:464.27M, Peak:464.27M | Scene, ViewLayer | Sample 1/16\nFra:1 Mem:265.04M (Peak 337.04M) | Time:00:07.96 | Mem:464.27M, Peak:464.27M | Scene, ViewLayer | Sample 16/16\nFra:1 Mem:265.04M (Peak 337.04M) | Time:00:07.96 | Mem:464.27M, Peak:464.27M | Scene, ViewLayer | Finished\nSaved: 'E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_back\\mask\\000000.png'\nTime: 00:08.13 (Saving: 00:00.09)\n\nSelecting render devices...\nDevice NVIDIA GeForce RTX 3070 Laptop GPU of type OPTIX found and used.\nDevice 11th Gen Intel Core i7-11800H @ 2.30GHz of type CPU found and used.\nWarning: File written by newer Blender binary (402.67), expect loss of data!\n\nBlender quit\nUsing temporary directory: C:\\Users\\meng'bi\\AppData\\Local\\Temp\\blender_proc_67fb9bbe963940bcae7ce0ba39e29d0d\nWarning: Changed install path from /home_local\\meng'bi... to C:\\Users\\meng'bi..., there is no /home_local/ on this machine.\nUsing blender in C:\\Users\\meng'bi\\blender\\blender-4.2.1-windows-x64\\blender-4.2.1-windows-x64\nCleaning temporary directory\n",
+  "files_produced": [
+    "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_back\\rgb\\000000.png",
+    "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_back\\masks\\000000.png",
+    "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_back\\mask\\000000.png",
+    "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_back\\labels_yolo\\000000.txt",
+    "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_back\\metadata\\000000.json"
+  ]
+}

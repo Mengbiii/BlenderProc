@@ -1,0 +1,57 @@
+{
+  "schema_version": "0.1",
+  "model_id": "QC7-5244",
+  "appearance_color": "black",
+  "purpose": "Multi-ROI visual material audit for QC7-5244 black plastic. These ROIs are diagnostic and should be manually reviewed before being used as a final fitting target.",
+  "reference_image": "E:/BlenderProject/BlenderProc/\u5851\u6599\u5de5\u4ef6\u771f\u5b9e\u6570\u636e\u96c6/QC7-5244\u9ed1\u8272/QC9-0852-\u6b63\u5e38/9K9A0793.JPG",
+  "reference_image_size": [5472, 3648],
+  "score_profile": "plastic_material",
+  "resize": 512,
+  "notes": [
+    "ROI boxes are in reference-image x,y,w,h pixel coordinates.",
+    "The current candidate renderer camera does not fully match the real reference camera, so this audit is a diagnostic ranking aid rather than final proof of material realism.",
+    "The center_flat_roi is the previous single ROI. Other ROIs add edge highlight, inner shadow, and micro-texture coverage."
+  ],
+  "rois": [
+    {
+      "roi_id": "center_flat_roi",
+      "label": "Center flat clean plastic",
+      "box_xywh": [2200, 1380, 1040, 560],
+      "weight": 0.30,
+      "include_in_material_score": true,
+      "reason": "Checks base color and average brightness on a broad flat plastic region."
+    },
+    {
+      "roi_id": "edge_highlight_roi",
+      "label": "Left inner edge highlight",
+      "box_xywh": [1300, 1040, 700, 760],
+      "weight": 0.25,
+      "include_in_material_score": true,
+      "reason": "Adds sloped/edge reflection behavior missing from a center-only ROI."
+    },
+    {
+      "roi_id": "inner_shadow_roi",
+      "label": "Inner tray shadow transition",
+      "box_xywh": [1300, 1760, 1100, 520],
+      "weight": 0.20,
+      "include_in_material_score": true,
+      "reason": "Checks whether material and scene calibration preserve soft shadow transitions."
+    },
+    {
+      "roi_id": "micro_texture_roi",
+      "label": "Lower textured plastic band",
+      "box_xywh": [1500, 2450, 1600, 360],
+      "weight": 0.20,
+      "include_in_material_score": true,
+      "reason": "Checks fine molded texture / subtle surface grain behavior."
+    },
+    {
+      "roi_id": "background_roi",
+      "label": "Background exposure reference",
+      "box_xywh": [3900, 2400, 900, 520],
+      "weight": 0.05,
+      "include_in_material_score": false,
+      "reason": "Scene/background diagnostic only; excluded from material score."
+    }
+  ]
+}

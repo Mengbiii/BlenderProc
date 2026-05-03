@@ -1,0 +1,22 @@
+{
+  "schema_version": "0.3",
+  "calibration_type": "authored_blend_material_transfer_test",
+  "description": "Use the authored QC7-1336 black plastic material from QC7-1336-black.blend as a temporary material override for visual smoke tests on other black model variants.",
+  "source_model_id": "QC71336",
+  "source_appearance_color": "black",
+  "material_source": {
+    "blend_path": "E:/BlenderProject/BlenderProc/assets/models/QC7-1336-black.blend",
+    "material_name": "Tex.001"
+  },
+  "material_parameters": {
+    "note": "The actual material is appended from material_source. The values below are descriptive only and are not used by the blend-material transfer branch.",
+    "base_color": [0.8, 0.8, 0.8, 1.0],
+    "roughness": 1.0,
+    "specular": 0.5,
+    "uses_image_textures": true,
+    "texture_family": "Plastic011_8K-PNG_Color/Roughness/NormalGL"
+  },
+  "scene_calibration": {
+    "note": "Scene calibration is not applied by this material-transfer test."
+  }
+}

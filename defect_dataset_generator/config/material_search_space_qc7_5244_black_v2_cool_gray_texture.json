@@ -1,0 +1,57 @@
+{
+  "schema_version": "0.2",
+  "profile_name": "qc7_5244_black_plastic_v2_cool_gray_texture",
+  "purpose": "Revised visual material calibration search space for QC7-5244 black plastic after human review found v1 too dark, too uniform, and too matte/CGI-like.",
+  "diagnosis_from_v1": [
+    "The v1 best candidate had a high single-ROI score but did not match whole-image material appearance.",
+    "Human review described the real part as deep cool gray plastic with subtle molded texture and soft broad highlights.",
+    "The synthetic result looked too dark, too neutral, too uniform, and too matte.",
+    "This V2 space shifts base color brighter and cooler, increases possible specular response, and keeps subtle noise/bump available."
+  ],
+  "notes": [
+    "This search space is still visual calibration only, not physical BRDF recovery.",
+    "Only parameters currently consumed by render_candidate.py are listed as active parameters.",
+    "Defect parameters are excluded from this fitting stage.",
+    "Use multi-ROI audit outputs to judge candidates; do not accept a material from the weighted score alone."
+  ],
+  "material_parameters": {
+    "base_color": [
+      [0.070, 0.073, 0.080, 1.0],
+      [0.085, 0.090, 0.100, 1.0],
+      [0.100, 0.106, 0.118, 1.0],
+      [0.115, 0.122, 0.136, 1.0],
+      [0.130, 0.138, 0.154, 1.0],
+      [0.145, 0.154, 0.170, 1.0]
+    ],
+    "roughness": [0.45, 0.55, 0.65],
+    "specular": [0.35, 0.50, 0.65],
+    "alpha": [1.0],
+    "subsurface": [0.0],
+    "noise_scale": [48.0, 72.0, 110.0],
+    "noise_strength": [0.006, 0.014, 0.024],
+    "bump_strength": [0.004, 0.010, 0.018]
+  },
+  "scene_calibration": {
+    "light_strength": [360.0, 460.0, 560.0, 680.0],
+    "exposure": [-0.05, 0.08, 0.18, 0.28],
+    "background_color": [
+      [0.62, 0.62, 0.62, 1.0],
+      [0.70, 0.70, 0.70, 1.0],
+      [0.78, 0.78, 0.78, 1.0]
+    ],
+    "camera_profile": ["deterministic_ortho_front"],
+    "render_resolution": [[512, 384]]
+  },
+  "recommended_scoring": {
+    "score_profile": "plastic_material",
+    "roi_mode": "mask_or_multi_roi_audit",
+    "roi_requirement": "Use multiple manually reviewed clean plastic ROIs: center flat, edge highlight, inner shadow transition, and micro-texture band.",
+    "post_fit_audit": "Run tools/audit_material_fit_multiroi.py and review the contact sheet before setting this material as a generation default."
+  },
+  "planned_future_parameters_not_active_yet": {
+    "roughness_noise_strength": "Requires render_candidate.py node support before use.",
+    "color_low_frequency_variation": "Requires shader support before use.",
+    "micro_bump_scale": "Current renderer uses noise_scale and bump_strength only.",
+    "camera_noise_strength": "Should be handled as camera/postprocess calibration, not base material."
+  }
+}

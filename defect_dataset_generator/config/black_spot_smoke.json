@@ -1,0 +1,23 @@
+{
+  "schema_version": "0.1",
+  "mode": "randomized",
+  "position_mode": "random_visible_surface",
+  "placement_surface_mode": "front_back_main_planes_only",
+  "allowed_surface_sides": ["front", "back"],
+  "allowed_surface_regions": ["main_plane"],
+  "camera_mode": "randomized",
+  "lighting_mode": "randomized",
+  "defects": [
+    {
+      "type": "black_spot",
+      "size": [0.015, 0.055],
+      "opacity": 0.85,
+      "color": [0.015, 0.012, 0.01, 1.0],
+      "blur": 0.12,
+      "depth": 0.18,
+      "position": "random_visible_surface",
+      "visibility": 1.0,
+      "randomness": 0.65
+    }
+  ]
+}

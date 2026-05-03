@@ -1,0 +1,44 @@
+{
+  "schema_version": "0.2",
+  "profile_name": "qc7_5244_black_plastic_v1",
+  "purpose": "Visual material calibration for QC7-5244 black plastic before any black-dot/foreign-material/splay generation.",
+  "notes": [
+    "This search space is for visual calibration only, not physical BRDF recovery.",
+    "QC7-5244 black must be calibrated independently from QC7-5244 white, QC71336, and P101040.",
+    "Defect parameters are excluded from this fitting stage.",
+    "Use clean normal real photos and a material-only ROI mask."
+  ],
+  "material_parameters": {
+    "base_color": [
+      [0.030, 0.030, 0.030, 1.0],
+      [0.045, 0.044, 0.043, 1.0],
+      [0.060, 0.058, 0.056, 1.0],
+      [0.075, 0.073, 0.070, 1.0],
+      [0.090, 0.088, 0.084, 1.0],
+      [0.110, 0.107, 0.102, 1.0]
+    ],
+    "roughness": [0.38, 0.52, 0.66, 0.80],
+    "specular": [0.18, 0.28, 0.40, 0.55],
+    "alpha": [1.0],
+    "subsurface": [0.0],
+    "noise_scale": [36.0, 60.0, 90.0],
+    "noise_strength": [0.0, 0.006, 0.012],
+    "bump_strength": [0.0, 0.004, 0.010]
+  },
+  "scene_calibration": {
+    "light_strength": [220.0, 300.0, 380.0, 460.0],
+    "exposure": [-0.30, -0.15, 0.0, 0.12],
+    "background_color": [
+      [0.55, 0.55, 0.55, 1.0],
+      [0.65, 0.65, 0.65, 1.0],
+      [0.75, 0.75, 0.75, 1.0]
+    ],
+    "camera_profile": ["deterministic_ortho_front"],
+    "render_resolution": [[512, 384]]
+  },
+  "recommended_scoring": {
+    "score_profile": "plastic_material",
+    "roi_mode": "mask",
+    "roi_requirement": "Use a clean black-plastic ROI mask from QC9-0852 normal images; exclude edges, printed markings, holes, and strong shadows."
+  }
+}

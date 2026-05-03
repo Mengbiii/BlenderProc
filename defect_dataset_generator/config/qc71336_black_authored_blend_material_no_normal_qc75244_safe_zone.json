@@ -1,0 +1,28 @@
+{
+  "schema_version": "0.3",
+  "calibration_type": "authored_blend_material_transfer_test_no_normal_safe_zone",
+  "description": "QC71336 black authored texture material transferred to QC7-5244 with normal map disabled and black-dot placement constrained to a flatter main-surface safe zone.",
+  "source_model_id": "QC71336",
+  "source_appearance_color": "black",
+  "target_model_id": "QC7-5244",
+  "material_source": {
+    "blend_path": "E:/BlenderProject/BlenderProc/assets/models/QC7-1336-black.blend",
+    "material_name": "Tex.001",
+    "disable_normal_map": true
+  },
+  "placement_control": {
+    "use_preset_safe_anchor_windows": true,
+    "notes": [
+      "Uses the QC75244_white preset safe_anchor_windows defined in reference_blend_blackdot_multi_model.py.",
+      "The goal is to avoid slopes, recess edges, grooves, holes, and strong geometry-transition zones during this smoke test."
+    ]
+  },
+  "material_parameters": {
+    "note": "The actual material is appended from material_source; normal input is disconnected after append.",
+    "uses_image_textures": true,
+    "texture_family": "Plastic011_8K-PNG_Color/Roughness, NormalGL disabled"
+  },
+  "scene_calibration": {
+    "note": "Scene calibration is not applied by this material-transfer test."
+  }
+}

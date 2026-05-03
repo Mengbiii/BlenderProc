@@ -1,0 +1,111 @@
+{
+  "schema_version": "0.1",
+  "description": "Model/color/defect targets for staged synthetic defect dataset generation. This file records intended dataset coverage; it does not imply every backend is already production-ready.",
+  "targets": {
+    "p101040_blue": {
+      "model_id": "P101040",
+      "appearance_color": "blue",
+      "real_dataset_folder": "P101040蓝色",
+      "real_available_defects": ["black_dot"],
+      "active_defects_current_stage": ["black_dot"],
+      "deferred_defects": [],
+      "single_defect_required": true,
+      "multi_defect_required": true,
+      "multi_defect_modes": ["multi_instance_black_dot"],
+      "current_backend_status": "black_dot_backend_existing_history"
+    },
+    "qc71336_black": {
+      "model_id": "QC71336",
+      "appearance_color": "black",
+      "real_dataset_folder": "QC71336黑色",
+      "real_available_defects": ["foreign_material", "splay"],
+      "active_defects_current_stage": ["foreign_material", "splay"],
+      "deferred_defects": [],
+      "single_defect_required": true,
+      "multi_defect_required": true,
+      "multi_defect_modes": ["foreign_material+splay"],
+      "current_backend_status": "foreign_material_splay_existing_debug_script"
+    },
+    "qc71336_white": {
+      "model_id": "QC71336",
+      "appearance_color": "white",
+      "real_dataset_folder": "QC71336白色",
+      "real_available_defects": ["black_dot", "foreign_material"],
+      "active_defects_current_stage": ["black_dot", "foreign_material"],
+      "deferred_defects": [],
+      "single_defect_required": true,
+      "multi_defect_required": true,
+      "multi_defect_modes": ["black_dot+foreign_material"],
+      "current_backend_status": "black_dot_framework_connected_foreign_material_pending"
+    },
+    "qc71336_gray": {
+      "model_id": "QC71336",
+      "appearance_color": "gray",
+      "real_dataset_folder": "QC71336灰色",
+      "real_available_defects": ["black_dot", "mixed_color_contamination"],
+      "active_defects_current_stage": ["black_dot", "mixed_color_contamination"],
+      "deferred_defects": [],
+      "single_defect_required": true,
+      "multi_defect_required": false,
+      "multi_defect_modes": [],
+      "current_backend_status": "black_dot_framework_connected_mixed_color_generic_soft_spiral_smoke_ready"
+    },
+    "qc7_5244_black": {
+      "model_id": "QC7-5244",
+      "appearance_color": "black",
+      "real_dataset_folder": "QC7-5244黑色",
+      "real_available_defects": ["black_dot", "foreign_material", "splay"],
+      "active_defects_current_stage": ["black_dot", "foreign_material", "splay"],
+      "deferred_defects": [],
+      "single_defect_required": true,
+      "multi_defect_required": true,
+      "multi_defect_modes": ["black_dot+foreign_material", "black_dot+splay", "foreign_material+splay", "black_dot+foreign_material+splay"],
+      "current_backend_status": "generic_main_plane_specialized_defects_smoke_ready_manual_material_profile",
+      "geometry_asset": "assets/models/QC7-5236.stl",
+      "geometry_asset_note": "QC7-5236.stl is the geometry asset currently used for the QC7-5244 target. It has no accepted authored material; target material must be built from the QC7-5244 profile/script.",
+      "default_material_profile": "qc7_5244_black_manual_v3",
+      "default_material_path": "defect_dataset_generator/config/qc7_5244_black_visual_material_candidate_v3.json",
+      "material_gate_status": "manual_profile_active_for_coverage_smoke_not_final_realism"
+    },
+    "qc7_5244_white": {
+      "model_id": "QC7-5244",
+      "appearance_color": "white",
+      "real_dataset_folder": "QC7-5244白色",
+      "real_available_defects": ["black_dot", "mixed_color_contamination"],
+      "active_defects_current_stage": ["black_dot", "mixed_color_contamination"],
+      "deferred_defects": [],
+      "single_defect_required": true,
+      "multi_defect_required": false,
+      "multi_defect_modes": [],
+      "current_backend_status": "black_dot_framework_connected_mixed_color_reference_backend_smoke_ready",
+      "geometry_asset": "assets/models/QC7-5236.stl",
+      "geometry_asset_note": "QC7-5236.stl is the geometry asset currently used for the QC7-5244 target. It has no accepted authored material; white appearance is constructed by the reference/generic scripts."
+    },
+    "ql3_1052_black": {
+      "model_id": "QL3-1052",
+      "appearance_color": "black",
+      "real_dataset_folder": "QL3-1052黑色",
+      "real_available_defects": ["splay", "foreign_material"],
+      "active_defects_current_stage": ["splay", "foreign_material"],
+      "deferred_defects": [],
+      "single_defect_required": true,
+      "multi_defect_required": true,
+      "multi_defect_modes": ["splay+foreign_material"],
+      "current_backend_status": "embedded_blend_profile_generic_main_plane_specialized_defects_smoke_ready"
+    }
+  },
+  "staged_generation_policy": {
+    "readiness_count_per_single_defect": 3,
+    "readiness_count_per_multi_defect_mode": 3,
+    "smoke_count_per_single_defect": 10,
+    "smoke_count_per_multi_defect_mode": 10,
+    "production_total_target_range": [3000, 5000],
+    "notes": [
+      "Synthetic production should only scale after non-YOLO visual and label-quality checks pass.",
+      "YOLO training is paused until visual realism and dataset splits are stable.",
+      "Each model/color target must be evaluated independently; do not mix white/gray/black real images in one comparison or training split.",
+      "sink_mark is intentionally excluded from the current 3k-5k production target set until a target-specific implementation is added.",
+      "mixed_color_contamination is active for the listed gray/white targets, but remains visual-smoke-level until per-target review accepts the appearance."
+    ]
+  }
+}

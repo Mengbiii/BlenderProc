@@ -1,0 +1,118 @@
+{
+  "schema_version": "0.1",
+  "preset_type": "black_dot_appearance",
+  "description": "Black-dot appearance presets for non-YOLO visual calibration. Values are backend scale parameters unless noted otherwise.",
+  "presets": {
+    "p101040_blue_current_backend_v1": {
+      "model_id": "P101040",
+      "appearance_color": "blue",
+      "backend_model": "P101040_blue",
+      "source": "current reference_blend_blackdot_multi_model.py P101040_blue preset",
+      "status": "migration_baseline",
+      "backend_parameters": {
+        "black_dot_radius_min_scale": 0.0038,
+        "black_dot_radius_max_scale": 0.0042,
+        "black_dot_depth_min_scale": 0.0059,
+        "black_dot_depth_max_scale": 0.0065
+      },
+      "appearance_notes": {
+        "defect_family": "embedded_internal",
+        "mask_policy": "main black-dot mesh only; local coupling patch is not labeled",
+        "visual_goal": "P101040 blue migration baseline; compare against blue real black-dot crops before production",
+        "known_risks": [
+          "P101040 blue is translucent/semi-transparent, so appearance should not be judged with opaque QC71336 thresholds",
+          "multi-instance black-dot mode is planned but not enabled in this first migration smoke"
+        ]
+      }
+    },
+    "qc7_5244_white_current_backend_v1": {
+      "model_id": "QC7-5244",
+      "appearance_color": "white",
+      "backend_model": "QC75244_white",
+      "backend_alias_note": "The current black-dot backend uses QC75244_white as the historical compatibility key for the real-data target named QC7-5244 white.",
+      "source": "current reference_blend_blackdot_multi_model.py QC75244_white preset",
+      "status": "migration_baseline",
+      "backend_parameters": {
+        "black_dot_radius_min_scale": 0.0018,
+        "black_dot_radius_max_scale": 0.0034,
+        "black_dot_depth_min_scale": 0.00055,
+        "black_dot_depth_max_scale": 0.00115
+      },
+      "appearance_notes": {
+        "defect_family": "embedded_internal",
+        "mask_policy": "main black-dot mesh only; local coupling patch is not labeled",
+        "visual_goal": "QC7-5244 white migration baseline; compare against QC7-5244 white real black-dot crops before production",
+        "known_risks": [
+          "backend naming uses QC75244_white while real data folder uses QC7-5244白色",
+          "QC7-5244 white mixed_color_contamination is handled by its separate reference backend, not by this black-dot preset"
+        ]
+      }
+    },
+    "qc71336_white_legacy_sync_v1": {
+      "model_id": "QC71336",
+      "appearance_color": "white",
+      "backend_model": "QC71336_white",
+      "source": "reference_blend_qc71336_white_prebuilt_normal_debug.py aligned parameters",
+      "status": "current_baseline",
+      "backend_parameters": {
+        "black_dot_radius_min_scale": 0.00171,
+        "black_dot_radius_max_scale": 0.00209,
+        "black_dot_depth_min_scale": 0.00063,
+        "black_dot_depth_max_scale": 0.00076
+      },
+      "appearance_notes": {
+        "defect_family": "embedded_internal",
+        "mask_policy": "main black-dot mesh only; local coupling patch is not labeled",
+        "visual_goal": "small embedded dark dot with subtle local coupling patch",
+        "known_risks": [
+          "visible size must be judged by real crop contact sheets, not bbox alone",
+          "white material brightness can make defects appear more visible"
+        ]
+      }
+    },
+    "qc71336_white_smaller_soft_v1": {
+      "model_id": "QC71336",
+      "appearance_color": "white",
+      "backend_model": "QC71336_white",
+      "source": "diagnostic candidate for smaller/subtler white-part black dots",
+      "status": "candidate",
+      "backend_parameters": {
+        "black_dot_radius_min_scale": 0.00135,
+        "black_dot_radius_max_scale": 0.00185,
+        "black_dot_depth_min_scale": 0.00045,
+        "black_dot_depth_max_scale": 0.00068
+      },
+      "appearance_notes": {
+        "defect_family": "embedded_internal",
+        "mask_policy": "main black-dot mesh only; local coupling patch is not labeled",
+        "visual_goal": "test whether current dots are still too large or too dark",
+        "known_risks": [
+          "may become too small for mask/bbox stability",
+          "requires count=3 to count=5 visual smoke before use"
+        ]
+      }
+    },
+    "qc71336_gray_legacy_sync_v1": {
+      "model_id": "QC71336",
+      "appearance_color": "gray",
+      "backend_model": "QC71336_gray",
+      "source": "current multi-model backend gray profile",
+      "status": "migration_baseline",
+      "backend_parameters": {
+        "black_dot_radius_min_scale": 0.0018,
+        "black_dot_radius_max_scale": 0.0032,
+        "black_dot_depth_min_scale": 0.00078,
+        "black_dot_depth_max_scale": 0.00135
+      },
+      "appearance_notes": {
+        "defect_family": "embedded_internal",
+        "mask_policy": "main black-dot mesh only; local coupling patch is not labeled",
+        "visual_goal": "gray part migration baseline; compare against QC71336 gray real black-dot crops before production",
+        "known_risks": [
+          "gray material is darker than white, so visibility and contrast thresholds must be rechecked",
+          "do not reuse white black-dot preset metrics as acceptance evidence"
+        ]
+      }
+    }
+  }
+}

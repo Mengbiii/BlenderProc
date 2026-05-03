@@ -1,0 +1,188 @@
+{
+  "schema_version": "0.1",
+  "description": "Default material, defect, placement, and domain-randomization parameters for coverage-first dataset generation. These defaults are runnable baselines, not final realism approvals.",
+  "material_defaults": {
+    "generic_blue_plastic": {
+      "status": "coverage_default",
+      "material_parameters": {
+        "base_color": [0.18, 0.42, 0.78, 1.0],
+        "roughness": 0.62,
+        "specular": 0.36,
+        "alpha": 1.0
+      }
+    },
+    "generic_white_plastic": {
+      "status": "coverage_default",
+      "material_parameters": {
+        "base_color": [0.72, 0.74, 0.76, 1.0],
+        "roughness": 0.62,
+        "specular": 0.36,
+        "alpha": 1.0
+      }
+    },
+    "generic_gray_plastic": {
+      "status": "coverage_default",
+      "material_parameters": {
+        "base_color": [0.58, 0.60, 0.62, 1.0],
+        "roughness": 0.62,
+        "specular": 0.36,
+        "alpha": 1.0
+      }
+    },
+    "generic_black_plastic": {
+      "status": "coverage_default",
+      "material_parameters": {
+        "base_color": [0.035, 0.038, 0.042, 1.0],
+        "roughness": 0.62,
+        "specular": 0.36,
+        "alpha": 1.0
+      }
+    },
+    "qc7_5244_black_manual_v3": {
+      "status": "manual_candidate_not_final_accepted",
+      "source_file": "defect_dataset_generator/config/qc7_5244_black_visual_material_candidate_v3.json",
+      "material_parameters": {
+        "base_color": [0.07, 0.082, 0.102, 1.0],
+        "roughness": 0.62,
+        "specular": 0.36,
+        "subsurface": 0.0,
+        "noise_scale": 180.0,
+        "noise_strength": 0.008,
+        "bump_strength": 0.002,
+        "alpha": 1.0,
+        "specular_ior_level": 0.36,
+        "translucency": 0.0
+      },
+      "scene_calibration": {
+        "light_strength": 500.0,
+        "exposure": -0.05,
+        "camera_profile": "deterministic_ortho_front",
+        "render_resolution": [1536, 1024],
+        "background_color": [0.72, 0.72, 0.72, 1.0]
+      }
+    }
+  },
+  "defect_defaults": {
+    "black_dot": {
+      "status": "coverage_default",
+      "class_id": 0,
+      "shape": "disk",
+      "size_factor_range": [0.012, 0.035],
+      "material": {
+        "base_color": [0.005, 0.004, 0.003, 1.0],
+        "roughness": 0.72
+      },
+      "legacy_config_defaults": {
+        "size": [0.015, 0.055],
+        "opacity": 0.85,
+        "color": [0.015, 0.012, 0.01, 1.0],
+        "blur": 0.12,
+        "depth": 0.18,
+        "visibility": 1.0,
+        "randomness": 0.65
+      }
+    },
+    "foreign_material": {
+      "status": "coverage_default",
+      "class_id": 1,
+      "shape": "small_rectangle_particle",
+      "size_factor_range": [0.012, 0.035],
+      "width_multiplier": 1.3,
+      "height_multiplier": 1.1,
+      "material": {
+        "base_color": [0.02, 0.018, 0.014, 1.0],
+        "roughness": 0.72
+      }
+    },
+    "splay": {
+      "status": "coverage_default",
+      "class_id": 2,
+      "shape": "thin_streak",
+      "size_factor_range": [0.012, 0.035],
+      "width_multiplier": 4.0,
+      "height_multiplier": 0.9,
+      "material": {
+        "base_color": [0.82, 0.84, 0.82, 1.0],
+        "roughness": 0.72
+      }
+    },
+    "mixed_color_contamination": {
+      "status": "coverage_default",
+      "class_id": 3,
+      "shape": "soft_area_proxy",
+      "size_factor_range": [0.012, 0.035],
+      "width_multiplier": 2.7,
+      "height_multiplier": 1.9,
+      "material": {
+        "base_color": [0.36, 0.34, 0.31, 1.0],
+        "roughness": 0.72
+      },
+      "legacy_config_defaults": {
+        "size": [0.04, 0.16],
+        "opacity": 0.35,
+        "color": [0.75, 0.72, 0.66, 1.0],
+        "blur": 0.45,
+        "depth": 0.02,
+        "visibility": 0.75,
+        "randomness": 0.8
+      }
+    },
+    "sink_mark": {
+      "status": "fallback_placeholder_excluded_from_current_production_targets",
+      "class_id": 4,
+      "shape": "dark_ellipse_proxy",
+      "production_policy": "Do not include sink_mark in the current 3k-5k target set until a target-specific implementation and visual smoke review are added.",
+      "size_factor_range": [0.012, 0.035],
+      "width_multiplier": 2.2,
+      "height_multiplier": 1.5,
+      "material": {
+        "base_color": [0.18, 0.18, 0.18, 1.0],
+        "roughness": 0.72
+      }
+    }
+  },
+  "black_dot_specialized_presets": {
+    "source_file": "defect_dataset_generator/config/black_dot_appearance_presets.json",
+    "default_by_target": {
+      "p101040_blue": "p101040_blue_current_backend_v1",
+      "qc71336_white": "qc71336_white_legacy_sync_v1",
+      "qc71336_gray": "qc71336_gray_legacy_sync_v1",
+      "qc7_5244_white": "qc7_5244_white_current_backend_v1"
+    }
+  },
+  "domain_randomization_defaults": {
+    "profile": "light_domain_randomization_v1",
+    "camera": {
+      "mode": "randomized",
+      "azimuth_degrees": [-15, 15],
+      "elevation_degrees": [-10, 10],
+      "roll_degrees": [-5, 5],
+      "distance_base": 2.2,
+      "distance_jitter_factor": [-0.05, 0.05],
+      "focal_length_mm": [65, 75]
+    },
+    "lighting": {
+      "mode": "randomized",
+      "strength_base": 450,
+      "strength_jitter_factor": [-0.2, 0.2],
+      "strength_range": [360, 540],
+      "direction_jitter_degrees": [-8, 8],
+      "area_size_base": 3.0,
+      "area_size_range": [2.7, 3.3]
+    },
+    "background": {
+      "mode": "randomized",
+      "color_base": [0.78, 0.78, 0.78, 1.0],
+      "color_jitter_rgb": [-0.03, 0.03],
+      "color_range_rgb": [[0.75, 0.81], [0.75, 0.81], [0.75, 0.81]]
+    }
+  },
+  "placement_defaults": {
+    "mode": "front_back_main_planes_only",
+    "allowed_surface_sides": ["front", "back"],
+    "allowed_surface_regions": ["main_plane"],
+    "exclude_complex_edges": true,
+    "exclude_holes": true,
+    "exclude_side_walls": true
+  }
+}

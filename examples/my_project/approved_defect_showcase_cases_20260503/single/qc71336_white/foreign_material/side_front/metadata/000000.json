@@ -1,0 +1,245 @@
+{
+  "schema_version": "0.1",
+  "source_backend": "reference_blend_blackdot_multi_model.py",
+  "seed": 81100,
+  "backend_model": "qc71336_white",
+  "anchor_side": "front",
+  "requested_anchor_side": "front",
+  "defect_type": "foreign_material",
+  "output_paths": {
+    "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_white\\foreign_material\\side_front\\rgb\\000000.png",
+    "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_white\\foreign_material\\side_front\\masks\\000000.png",
+    "label_yolo": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_white\\foreign_material\\side_front\\labels_yolo\\000000.txt",
+    "metadata": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_white\\foreign_material\\side_front\\metadata\\000000.json"
+  },
+  "raw_backend_output_dir": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_white\\foreign_material\\side_front\\_backend\\qc71336_white_foreign_reference",
+  "raw_sample": {
+    "image_id": "000000",
+    "rgb": "rgb\\000000.png",
+    "schema_version": "reference_normal_debug_v1",
+    "baseline_version": "qc71336_white_prebuilt_reference_baseline_v2",
+    "task_type": "reference_scene_foreign_material_validation",
+    "model_name": "QC7-1336",
+    "geometry_profile": "qc7_1336_geometry",
+    "appearance_profile": "qc71336_white_prebuilt_profile",
+    "material_family": "prebuilt_authored_white_plastic",
+    "defect_type": "foreign_material",
+    "defect_type_internal": "foreign_material",
+    "defect_type_canonical": "foreign_material",
+    "has_defect": true,
+    "reference_scene": "E:\\BlenderProject\\BlenderProc\\assets\\models\\moxing2.blend",
+    "model_blend": "E:\\BlenderProject\\BlenderProc\\assets\\models\\QC7-1336-white.blend",
+    "camera_name": "REFERENCE_DEBUG_CAMERA",
+    "camera_location": [
+      -0.8051787614822388,
+      -2.2001428604125977,
+      5.255953311920166
+    ],
+    "camera_rotation_euler": [
+      0.4621065557003021,
+      2.5626428978853255e-08,
+      -0.38366588950157166
+    ],
+    "original_materials": {
+      "QC8-8511-000N301002ST0101.001": [
+        "Tex"
+      ]
+    },
+    "assigned_materials": {
+      "QC8-8511-000N301002ST0101.001": [
+        "Tex"
+      ]
+    },
+    "gray_override_enabled": false,
+    "gray_override_material": null,
+    "white_real_domain_material_tuning": {
+      "Tex": {
+        "old_base_color": [
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          1.0
+        ],
+        "new_base_color": [
+          0.7600000113248825,
+          0.7520000112056732,
+          0.744000011086464,
+          1.0
+        ],
+        "roughness": 0.9599999785423279,
+        "specular": 0.28999999165534973
+      }
+    },
+    "black_dot_version": null,
+    "foreign_material_version": "qc71336_white_prebuilt_foreign_material_v3",
+    "black_dot": null,
+    "foreign_material": {
+      "defect_type": "foreign_material",
+      "defect_type_internal": "foreign_material",
+      "defect_type_canonical": "foreign_material",
+      "subtype": "tan_gray_particle",
+      "shape": "irregular_flat_chip",
+      "dot_object": "REFERENCE_QC71336_FOREIGN_MATERIAL",
+      "foreign_object": "REFERENCE_QC71336_FOREIGN_MATERIAL",
+      "anchor_polygon_index": 118717,
+      "anchor_side": "front",
+      "radius": 0.0058,
+      "depth": 0.0006117889343195067,
+      "radius_floor": 0.0058,
+      "radius_ceiling": 0.0088,
+      "size_tier": "normal",
+      "world_point": [
+        -0.7229525446891785,
+        0.12019619345664978,
+        0.09859154373407364
+      ],
+      "world_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "anchor_band": "front_face",
+      "anchor_score": 5.956485234476253,
+      "anchor_planar_score": 1.0,
+      "anchor_local_planarity": 1.0,
+      "anchor_view_alignment": 0.911856472492218,
+      "anchor_local_xy": [
+        -0.7657966406414056,
+        -0.0802595722605502
+      ],
+      "anchor_projected_xy": [
+        0.23599876463413239,
+        0.3875184655189514
+      ],
+      "anchor_xy_ratio": [
+        0.7657966406414056,
+        0.0802595722605502
+      ],
+      "particle_spin_radians": 2.0545702278676763,
+      "material_version": "qc71336_white_prebuilt_foreign_material_v3",
+      "seed": 81100,
+      "camera_tracking": {
+        "anchor_band": "front_face",
+        "camera_preset": "front_face_oblique_real_white",
+        "camera_location": [
+          -0.8051787614822388,
+          -2.2001428604125977,
+          5.255953311920166
+        ],
+        "camera_rotation_euler": [
+          0.4621065557003021,
+          2.5626428978853255e-08,
+          -0.38366588950157166
+        ],
+        "defect_projected_xy": [
+          0.2564374804496765,
+          0.3875184655189514
+        ],
+        "visible_after_follow": true,
+        "tracking_target": [
+          -0.7229525446891785,
+          0.12019619345664978,
+          0.09859154373407364
+        ],
+        "backdrop": {
+          "anchor_band": "front_face",
+          "visible": true,
+          "location": [
+            0.12564,
+            0.1934,
+            -0.95418
+          ],
+          "occlusion_policy": "placed_behind_model_relative_to_anchor_band_camera"
+        }
+      },
+      "camera_follow": {
+        "anchor_side": "front",
+        "camera_side": "front",
+        "projected_xy_after_follow": [
+          0.25644,
+          0.38752
+        ],
+        "visible_after_follow": true
+      },
+      "view_transform": {
+        "enabled": false,
+        "mode": "none",
+        "camera_moved_for_defect_side": null,
+        "camera_side": "front",
+        "physical_anchor_side": "front",
+        "rotation_degrees_xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "translation_xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pivot_policy": "product_bbox_center",
+        "environment_transform": "none",
+        "default_backside_operation": false
+      }
+    },
+    "lightweight_label": {
+      "mask": "mask\\000000.png",
+      "overlay": "overlay\\000000.png",
+      "label_yolo": "labels_yolo\\000000.txt",
+      "bbox": {
+        "xyxy": [
+          391,
+          625,
+          396,
+          628
+        ],
+        "xywh": [
+          391,
+          625,
+          6,
+          4
+        ],
+        "area_pixels": 18
+      },
+      "mask_width": 1536,
+      "mask_height": 1024
+    },
+    "blend_file": null
+  },
+  "material_override": {
+    "applied": false,
+    "material_path": null,
+    "backend_material_info": null
+  },
+  "raw_metadata_summary": {
+    "model_name": "QC7-1336",
+    "appearance_profile": "qc71336_white_prebuilt_profile",
+    "material_family": "prebuilt_authored_white_plastic",
+    "defect_type": "foreign_material",
+    "render_width": 1536,
+    "render_height": 1024,
+    "cycles_samples": 16,
+    "gpu_info": {
+      "render_engine": "CYCLES",
+      "cycles_device": "GPU",
+      "compute_device_type": "OPTIX",
+      "enabled_devices": [
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "CUDA"
+        },
+        {
+          "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+          "type": "OPTIX"
+        }
+      ]
+    },
+    "render_device_info": null,
+    "material_info": null,
+    "seed": 81100,
+    "sample_seed": 81100,
+    "anchor_side": "front",
+    "requested_anchor_side": "front"
+  },
+  "label_fallback": null
+}

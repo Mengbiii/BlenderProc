@@ -1,0 +1,107 @@
+{
+  "schema_version": "0.1",
+  "plan_id": "3k_5k_rehearsal_v1_500",
+  "created_date": "2026-05-02",
+  "purpose": "Medium rehearsal before launching the 3k-5k synthetic defect dataset.",
+  "total_images": 500,
+  "mix": {
+    "single_defect": {
+      "count": 350,
+      "ratio": 0.7
+    },
+    "multi_defect_cooccurrence": {
+      "count": 100,
+      "ratio": 0.2
+    },
+    "normal": {
+      "count": 50,
+      "ratio": 0.1
+    }
+  },
+  "render_policy": {
+    "renderer": "CYCLES",
+    "device_policy": "require_gpu_prefer_optix_then_cuda",
+    "generic_backend_gpu_metadata_required": true,
+    "reference_backend_gpu_metadata_required": true,
+    "rehearsal_samples": 16,
+    "final_3k_5k_samples_recommendation": 24,
+    "fail_if_gpu_unavailable": false,
+    "gpu_unavailable_action": "stop_and_review_before_large_batch"
+  },
+  "seed_policy": {
+    "base_seed": 26000,
+    "single_defect_seed_start": 26000,
+    "multi_defect_seed_start": 36000,
+    "normal_seed_start": 46000,
+    "rule": "Each target/defect block receives a deterministic seed offset. Do not reuse seed ranges between rehearsal and final production."
+  },
+  "side_policy": {
+    "default_front_back_targets": {
+      "front": 0.5,
+      "back": 0.5
+    },
+    "qc7_5244_black": {
+      "front": 0.3,
+      "back": 0.7
+    },
+    "ql3_1052_black": {
+      "front": 0.8,
+      "side": 0.2,
+      "back": 0.0
+    },
+    "p101040_blue": {
+      "front": 1.0,
+      "back": 0.0
+    },
+    "cooccurrence_rule": "Use one side per image so all defects are visible from the same camera. Do not force defects apart; only prevent destructive overlap."
+  },
+  "single_defect_allocation": [
+    {"target": "p101040_blue", "defect": "black_dot", "count": 28},
+    {"target": "qc71336_black", "defect": "foreign_material", "count": 24},
+    {"target": "qc71336_black", "defect": "splay", "count": 24},
+    {"target": "qc71336_white", "defect": "black_dot", "count": 28},
+    {"target": "qc71336_white", "defect": "foreign_material", "count": 23},
+    {"target": "qc71336_gray", "defect": "black_dot", "count": 28},
+    {"target": "qc71336_gray", "defect": "mixed_color_contamination", "count": 23},
+    {"target": "qc7_5244_black", "defect": "black_dot", "count": 28},
+    {"target": "qc7_5244_black", "defect": "foreign_material", "count": 24},
+    {"target": "qc7_5244_black", "defect": "splay", "count": 24},
+    {"target": "qc7_5244_white", "defect": "black_dot", "count": 28},
+    {"target": "qc7_5244_white", "defect": "mixed_color_contamination", "count": 23},
+    {"target": "ql3_1052_black", "defect": "foreign_material", "count": 23},
+    {"target": "ql3_1052_black", "defect": "splay", "count": 22}
+  ],
+  "multi_defect_cooccurrence_allocation": [
+    {"target": "qc71336_black", "defects": ["foreign_material", "splay"], "count": 16},
+    {"target": "qc71336_white", "defects": ["black_dot", "foreign_material"], "count": 16},
+    {"target": "qc71336_gray", "defects": ["black_dot", "mixed_color_contamination"], "count": 15},
+    {"target": "qc7_5244_black", "defects": ["black_dot", "foreign_material", "splay"], "count": 22},
+    {"target": "qc7_5244_white", "defects": ["black_dot", "mixed_color_contamination"], "count": 15},
+    {"target": "ql3_1052_black", "defects": ["foreign_material", "splay"], "count": 16}
+  ],
+  "normal_allocation": [
+    {"target": "p101040_blue", "count": 8},
+    {"target": "qc71336_black", "count": 7},
+    {"target": "qc71336_white", "count": 7},
+    {"target": "qc71336_gray", "count": 7},
+    {"target": "qc7_5244_black", "count": 8},
+    {"target": "qc7_5244_white", "count": 7},
+    {"target": "ql3_1052_black", "count": 6}
+  ],
+  "acceptance_gates": [
+    "No BlenderProc crash in any block.",
+    "Every defect sample has nonblank RGB, nonempty merged mask, valid YOLO label, and metadata.",
+    "Every cooccurrence sample has label line count equal to metadata defect count.",
+    "Generic backend metadata render_device_info.gpu_enabled must be true before scaling to 3k-5k.",
+    "Reference backend metadata render_device_info or backend log must show cycles_device=GPU and a non-CPU compute backend.",
+    "Contact sheets must pass manual review for each target/defect and each cooccurrence target.",
+    "Image-quality and defect-realism reports must be generated before final 3k-5k launch."
+  ],
+  "output_recommendation": {
+    "rehearsal_root": "defect_dataset_generator/outputs/dataset/rehearsal_500_20260502",
+    "final_root_template": "defect_dataset_generator/outputs/dataset/production_3k_5k_YYYYMMDD",
+    "keep_backend_logs": true,
+    "keep_generation_plan": true,
+    "keep_dataset_summary": true
+  }
+}

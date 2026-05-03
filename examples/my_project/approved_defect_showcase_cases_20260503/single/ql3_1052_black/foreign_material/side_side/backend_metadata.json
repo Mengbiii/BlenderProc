@@ -1,0 +1,118 @@
+{
+  "schema_version": "generic_main_plane_v0.1",
+  "script": "E:\\BlenderProject\\BlenderProc\\defect_dataset_generator\\blender_scripts\\render_generic_main_plane_defects.py",
+  "target": "ql3_1052_black",
+  "defect_type": "foreign_material",
+  "placement_policy": "ql3_front_and_side_flat_planes_only_no_back",
+  "main_plane_axis_policy": "ql3_fixed_front_z_plane_and_side_x_plane_with_flat_safe_windows",
+  "product_bbox": {
+    "min": [
+      -0.3302097022533417,
+      -0.6254271268844604,
+      -0.015405140817165375
+    ],
+    "max": [
+      0.2620144188404083,
+      1.359838604927063,
+      0.10135716944932938
+    ],
+    "dims": [
+      0.59222412109375,
+      1.9852657318115234,
+      0.11676231026649475
+    ],
+    "main_plane_axis": "z"
+  },
+  "scene_profile": {
+    "uses_existing_camera": false,
+    "existing_camera": null,
+    "force_generic_camera": true,
+    "force_generic_lighting": true,
+    "uses_existing_lights": false,
+    "existing_lights": [],
+    "fallback_policy": "reuse_existing_scene_first_else_generic_camera_light; imported STL forces generic camera"
+  },
+  "source_paths": {
+    "blend": "E:\\BlenderProject\\BlenderProc\\assets\\models\\QL3-black.blend",
+    "stl": null
+  },
+  "render_width": 1536,
+  "render_height": 1024,
+  "cycles_samples": 16,
+  "render_device_info": {
+    "requested": true,
+    "render_engine": "CYCLES",
+    "cycles_device": "GPU",
+    "compute_device_type": "OPTIX",
+    "enabled_devices": [
+      {
+        "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+        "type": "OPTIX"
+      },
+      {
+        "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+        "type": "CUDA"
+      }
+    ],
+    "gpu_enabled": true,
+    "fallback": null
+  },
+  "seed": 81510,
+  "object_transform_mode": "none",
+  "samples": [
+    {
+      "image_id": 0,
+      "rgb": "rgb\\000000.png",
+      "mask": "mask\\000000.png",
+      "label_yolo": "labels_yolo\\000000.txt",
+      "defect_type": "foreign_material",
+      "defect_type_canonical": "foreign_material",
+      "bbox": {
+        "xywh": [
+          528,
+          450,
+          209,
+          121
+        ],
+        "xyxy": [
+          528,
+          450,
+          737,
+          571
+        ],
+        "area_pixels": 25289
+      },
+      "anchor_side": "side",
+      "main_plane_axis": "y",
+      "placement_policy": "ql3_front_and_side_flat_planes_only_no_back",
+      "view_transform": {
+        "enabled": false,
+        "mode": "none",
+        "camera_moved_for_defect_side": true,
+        "camera_side": "side",
+        "physical_anchor_side": "side",
+        "rotation_degrees_xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "translation_xyz": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "pivot_policy": "product_bbox_center",
+        "environment_transform": "none",
+        "default_backside_operation": false
+      },
+      "generic_backend": true,
+      "quality_goal": "coverage_first_not_visual_realism",
+      "seed": 81510
+    }
+  ],
+  "notes": [
+    "This fallback backend is for first-pass generation coverage only.",
+    "Defects are simplified primitives placed on configured planar safe windows."
+  ],
+  "defaults_registry": "E:\\BlenderProject\\BlenderProc\\defect_dataset_generator\\config\\generation_defaults_registry.json"
+}

@@ -1,0 +1,449 @@
+{
+  "script": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\reference_blend_qc71336_black_prebuilt_normal_debug.py",
+  "schema_version": "reference_normal_debug_v1",
+  "baseline_version": "qc71336_black_prebuilt_reference_baseline_v2",
+  "baseline_summary": "QC7-1336 black prebuilt-material normal-part baseline in moxing2.blend with a cleaned direct-model workflow, a more front-facing camera angle, and the manually authored materials from QC7-1336-black.blend.",
+  "task_type": "reference_scene_foreign_material_splay_validation",
+  "reference_scene": "E:\\BlenderProject\\BlenderProc\\assets\\models\\moxing2.blend",
+  "model_blend": "E:\\BlenderProject\\BlenderProc\\assets\\models\\QC7-1336-black.blend",
+  "model_name": "QC7-1336",
+  "geometry_profile": "qc7_1336_geometry",
+  "appearance_profile": "qc71336_black_prebuilt_profile",
+  "material_family": "prebuilt_authored_black_plastic",
+  "defect_type": "foreign_material_splay",
+  "defect_type_internal": "foreign_material_splay",
+  "defect_type_canonical": "foreign_material_splay",
+  "foreign_material_version": "qc71336_black_prebuilt_foreign_material_v2",
+  "splay_version": "qc71336_black_prebuilt_splay_v1",
+  "render_width": 1536,
+  "render_height": 1024,
+  "cycles_samples": 16,
+  "defect_seed": 81600,
+  "debug_splay_strong": false,
+  "gpu_info": {
+    "render_engine": "CYCLES",
+    "cycles_device": "GPU",
+    "compute_device_type": "OPTIX",
+    "enabled_devices": [
+      {
+        "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+        "type": "CUDA"
+      },
+      {
+        "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+        "type": "OPTIX"
+      }
+    ]
+  },
+  "lighting": [
+    {
+      "name": "Area",
+      "type": "AREA",
+      "energy": 1.2000000476837158,
+      "color": [
+        0.9649999737739563,
+        0.972000002861023,
+        0.9850000143051147
+      ]
+    },
+    {
+      "name": "Area.001",
+      "type": "AREA",
+      "energy": 1.100000023841858,
+      "color": [
+        0.9649999737739563,
+        0.972000002861023,
+        0.9850000143051147
+      ]
+    },
+    {
+      "name": "Area.002",
+      "type": "AREA",
+      "energy": 1.0,
+      "color": [
+        0.9649999737739563,
+        0.972000002861023,
+        0.9850000143051147
+      ]
+    },
+    {
+      "name": "Area.003",
+      "type": "AREA",
+      "energy": 15.600000381469727,
+      "color": [
+        1.0,
+        0.9879999756813049,
+        0.972000002861023
+      ]
+    },
+    {
+      "name": "Area.004",
+      "type": "AREA",
+      "energy": 0.800000011920929,
+      "color": [
+        0.9649999737739563,
+        0.972000002861023,
+        0.9850000143051147
+      ]
+    },
+    {
+      "name": "Area.005",
+      "type": "AREA",
+      "energy": 7.199999809265137,
+      "color": [
+        1.0,
+        0.9879999756813049,
+        0.972000002861023
+      ]
+    },
+    {
+      "name": "Area.006",
+      "type": "AREA",
+      "energy": 30.0,
+      "color": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "Area.007",
+      "type": "AREA",
+      "energy": 10.0,
+      "color": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "Area.008",
+      "type": "AREA",
+      "energy": 30.0,
+      "color": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "Area.009",
+      "type": "AREA",
+      "energy": 10.0,
+      "color": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "Area.010",
+      "type": "AREA",
+      "energy": 10.0,
+      "color": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "Area.011",
+      "type": "AREA",
+      "energy": 10.0,
+      "color": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "pack_error": null,
+  "samples": [
+    {
+      "image_id": "000000",
+      "rgb": "rgb\\000000.png",
+      "schema_version": "reference_normal_debug_v1",
+      "baseline_version": "qc71336_black_prebuilt_reference_baseline_v2",
+      "task_type": "reference_scene_foreign_material_splay_validation",
+      "model_name": "QC7-1336",
+      "geometry_profile": "qc7_1336_geometry",
+      "appearance_profile": "qc71336_black_prebuilt_profile",
+      "material_family": "prebuilt_authored_black_plastic",
+      "defect_type": "foreign_material_splay",
+      "defect_type_internal": "foreign_material_splay",
+      "defect_type_canonical": "foreign_material_splay",
+      "has_defect": true,
+      "reference_scene": "E:\\BlenderProject\\BlenderProc\\assets\\models\\moxing2.blend",
+      "model_blend": "E:\\BlenderProject\\BlenderProc\\assets\\models\\QC7-1336-black.blend",
+      "camera_name": "REFERENCE_DEBUG_CAMERA",
+      "camera_location": [
+        0.12564200162887573,
+        -0.13903936743736267,
+        5.74352502822876
+      ],
+      "camera_rotation_euler": [
+        0.06386564671993256,
+        -0.0,
+        0.0
+      ],
+      "foreign_material_version": "qc71336_black_prebuilt_foreign_material_v2",
+      "splay_version": "qc71336_black_prebuilt_splay_v1",
+      "defect": {
+        "defect_type": "foreign_material_splay",
+        "defect_type_internal": "foreign_material_splay",
+        "defect_type_canonical": "foreign_material_splay",
+        "defect_types": [
+          "foreign_material",
+          "splay"
+        ],
+        "defects": [
+          {
+            "defect_type": "foreign_material",
+            "defect_type_internal": "foreign_material",
+            "defect_type_canonical": "foreign_material",
+            "subtype": "gray_particle",
+            "shape": "flattened_chip",
+            "size_tier": "tiny",
+            "target_object": "QC8-8511-000N301002ST0101.002",
+            "object_name": "REFERENCE_FOREIGN_MATERIAL_0000",
+            "mask_object": "REFERENCE_FOREIGN_MATERIAL_0000",
+            "anchor_polygon_index": 719298,
+            "anchor_side": "front",
+            "world_point": [
+              0.13416,
+              0.35513,
+              0.09954
+            ],
+            "world_normal": [
+              0.07921,
+              0.02472,
+              0.99655
+            ],
+            "radius": 0.0072,
+            "radius_floor": 0.0072,
+            "embed_factor": 0.135837,
+            "placement_jitter_radius": 0.001425,
+            "placement_zone": "central_safe",
+            "local_xy": [
+              0.00695,
+              0.17606
+            ],
+            "projected_xy": [
+              0.5030962824821472,
+              0.4520043432712555
+            ],
+            "anchor_planar_score": 0.9965518116950989,
+            "anchor_xy_ratio": [
+              0.006947897399000945,
+              0.1760557880518818
+            ],
+            "version": "qc71336_black_prebuilt_foreign_material_v2"
+          },
+          {
+            "defect_type": "splay",
+            "defect_type_internal": "splay",
+            "defect_type_canonical": "splay",
+            "control_object": "REFERENCE_SPLAY_CTRL_0000",
+            "object_name": "REFERENCE_SPLAY_STREAK_0000",
+            "mask_object": "REFERENCE_SPLAY_STREAK_0000",
+            "appearance_mode": "short_silver_gray_streak_patch",
+            "appearance_tier": "faint",
+            "shape_mode": "localized_oblique_streak",
+            "anchor_polygon_index": 133454,
+            "anchor_side": "front",
+            "world_point": [
+              0.08173,
+              0.29912,
+              0.09859
+            ],
+            "world_normal": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "length": 0.090967,
+            "width": 0.004955,
+            "length_floor": 0.038,
+            "width_floor": 0.0022,
+            "size_tier": "short",
+            "radius_x": 0.045484,
+            "radius_y": 0.004955,
+            "aspect_ratio": 9.1789,
+            "placement_jitter_radius": 0.012155,
+            "placement_zone": "central_safe",
+            "local_xy": [
+              -0.03751,
+              0.12899
+            ],
+            "debug_splay_strong": false,
+            "projected_xy": [
+              0.4832773506641388,
+              0.4261399805545807
+            ],
+            "anchor_planar_score": 1.0,
+            "anchor_xy_ratio": [
+              0.03751358709976417,
+              0.12899273119674887
+            ],
+            "version": "qc71336_black_prebuilt_splay_v1",
+            "materials_touched": [],
+            "mask_mode": "visible_streak_patch",
+            "flow_angle": 0.4749,
+            "alpha": 0.092,
+            "base_value": 0.2917,
+            "roughness": 0.9011,
+            "halo_alpha": 0.052,
+            "halo_base_value": 0.2253,
+            "halo_roughness": 0.9512
+          }
+        ],
+        "mask_objects": [
+          "REFERENCE_FOREIGN_MATERIAL_0000",
+          "REFERENCE_SPLAY_STREAK_0000"
+        ],
+        "anchor_side": "front",
+        "world_point": [
+          0.10794,
+          0.32713,
+          0.09907
+        ],
+        "world_normal": [
+          0.07921,
+          0.02472,
+          0.99655
+        ],
+        "version": {
+          "foreign_material": "qc71336_black_prebuilt_foreign_material_v2",
+          "splay": "qc71336_black_prebuilt_splay_v1"
+        },
+        "camera_follow": {
+          "anchor_side": "front",
+          "camera_side": "front",
+          "projected_xy_after_follow": [
+            0.49772,
+            0.50128
+          ],
+          "visible_after_follow": true
+        },
+        "backdrop": {
+          "side": "front",
+          "location": [
+            0.12564,
+            0.1934,
+            -0.90519
+          ],
+          "scale": [
+            6.20547,
+            6.20547,
+            1.0
+          ],
+          "occlusion_policy": "placed_behind_model_relative_to_anchor_side_camera"
+        },
+        "view_transform": {
+          "enabled": false,
+          "mode": "none",
+          "camera_moved_for_defect_side": null,
+          "camera_side": "front",
+          "physical_anchor_side": "front",
+          "rotation_degrees_xyz": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "translation_xyz": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pivot_policy": "product_bbox_center",
+          "environment_transform": "none",
+          "default_backside_operation": false
+        }
+      },
+      "lightweight_label": {
+        "mask": "mask\\000000.png",
+        "overlay": "overlay\\000000.png",
+        "label_yolo": "labels_yolo\\000000.txt",
+        "bbox": {
+          "xyxy": [
+            725,
+            488,
+            783,
+            539
+          ],
+          "xywh": [
+            725,
+            488,
+            59,
+            52
+          ],
+          "area_pixels": 338
+        },
+        "bbox_area_pixels": 3068,
+        "defect_bboxes": [
+          {
+            "defect_type": "foreign_material",
+            "class_id": 1,
+            "bbox": {
+              "xyxy": [
+                778,
+                488,
+                783,
+                497
+              ],
+              "xywh": [
+                778,
+                488,
+                6,
+                10
+              ],
+              "area_pixels": 37
+            }
+          },
+          {
+            "defect_type": "splay",
+            "class_id": 2,
+            "bbox": {
+              "xyxy": [
+                725,
+                516,
+                771,
+                539
+              ],
+              "xywh": [
+                725,
+                516,
+                47,
+                24
+              ],
+              "area_pixels": 302
+            }
+          }
+        ],
+        "mask_width": 1536,
+        "mask_height": 1024
+      },
+      "assigned_materials": {
+        "QC8-8511-000N301002ST0101.002": [
+          "Tex.001"
+        ]
+      },
+      "main_plane_roughness_tuning": {
+        "Tex.001": {
+          "old_roughness": 1.0,
+          "new_roughness": 0.94
+        }
+      },
+      "blend_file": null
+    }
+  ],
+  "notes": [
+    "Baseline locked as qc71336_black_prebuilt_reference_baseline_v2.",
+    "QC7-1336 black prebuilt-material normal-part baseline in moxing2.blend with a cleaned direct-model workflow, a more front-facing camera angle, and the manually authored materials from QC7-1336-black.blend.",
+    "Uses the manually authored materials embedded in QC7-1336-black.blend and intentionally skips script-side material reassignment.",
+    "Only objects whose names contain QC8-8511-000N301002ST0101 are kept for rendering from the appended model blend.",
+    "Camera was pulled back slightly to preserve more of the part silhouette in-frame.",
+    "This reference script is now focused on foreign-material particles and splay streaks only.",
+    "Foreign material is rendered as a small attached geometry object with its own material, while splay is rendered by modifying the underlying material response and exporting a separate mask helper patch."
+  ]
+}

@@ -1,0 +1,7 @@
+# CLI compare-images requires Pillow.
+pillow>=8.0
+
+# Optional future dependencies:
+# scikit-image
+# opencv-python
+# lpips

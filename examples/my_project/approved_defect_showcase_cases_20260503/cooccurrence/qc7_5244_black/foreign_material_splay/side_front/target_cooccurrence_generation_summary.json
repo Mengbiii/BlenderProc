@@ -1,0 +1,353 @@
+{
+  "schema_version": "0.1",
+  "status": "rendered_or_attempted",
+  "generation_mode": "multi_defect_cooccurrence",
+  "target": "qc7_5244_black",
+  "target_profile": {
+    "model_id": "QC7-5244",
+    "appearance_color": "black",
+    "blend_path": "assets/models/moxing1_test.blend",
+    "stl_path": "assets/models/QC7-5236.stl",
+    "material_source": {
+      "mode": "manual_profile",
+      "path": "defect_dataset_generator/config/qc7_5244_black_visual_material_candidate_v3.json"
+    },
+    "preferred_backends": {
+      "black_dot": "generic_main_plane",
+      "foreign_material": "generic_main_plane",
+      "splay": "generic_main_plane",
+      "default": "generic_main_plane"
+    },
+    "supported_defects": [
+      "black_dot",
+      "foreign_material",
+      "splay"
+    ],
+    "default_anchor_sides": [
+      "back"
+    ],
+    "placement_policy": "front_back_main_planes_only",
+    "notes": [
+      "QC7-5236.stl is the geometry asset currently used for the QC7-5244 target.",
+      "The STL does not carry an accepted authored material; black appearance is constructed from defect_dataset_generator/config/qc7_5244_black_visual_material_candidate_v3.json.",
+      "This profile is smoke-ready for coverage generation, not final realism acceptance."
+    ],
+    "target_id": "qc7_5244_black"
+  },
+  "requested_defects": [
+    "foreign_material",
+    "splay"
+  ],
+  "backend_equivalence": {
+    "cooccurrence_backend": "generic_main_plane_cooccurrence",
+    "single_backend_by_defect": {
+      "foreign_material": "generic_main_plane",
+      "splay": "generic_main_plane"
+    },
+    "uses_shared_generic_create_defect": true,
+    "uses_same_single_defect_logic": true,
+    "non_equivalent_defects": [],
+    "notes": [
+      "Generic single-defect and generic cooccurrence both call render_generic_main_plane_defects.create_defect().",
+      "Reference/specialized single-defect backends are not yet available as same-scene cooccurrence backends."
+    ]
+  },
+  "count": 1,
+  "output_dir": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_front",
+  "quality_goal": "cooccurrence_proof_first_not_visual_realism",
+  "plan": {
+    "status": "rendered",
+    "backend": "generic_main_plane_cooccurrence",
+    "backend_script": "E:\\BlenderProject\\BlenderProc\\defect_dataset_generator\\blender_scripts\\render_generic_main_plane_defects.py",
+    "commands": [
+      [
+        "D:\\Anaconda\\envs\\defect_eval\\python.exe",
+        "E:\\BlenderProject\\BlenderProc\\cli.py",
+        "run",
+        "E:\\BlenderProject\\BlenderProc\\defect_dataset_generator\\blender_scripts\\render_generic_main_plane_defects.py",
+        "--",
+        "--target",
+        "qc7_5244_black",
+        "--defect_type",
+        "foreign_material",
+        "--cooccurrence_defects",
+        "foreign_material",
+        "splay",
+        "--output",
+        "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_front",
+        "--num",
+        "1",
+        "--start_index",
+        "0",
+        "--samples",
+        "16",
+        "--seed",
+        "81700",
+        "--anchor_sides",
+        "front",
+        "--blend",
+        "E:\\BlenderProject\\BlenderProc\\assets\\models\\moxing1_test.blend",
+        "--stl",
+        "E:\\BlenderProject\\BlenderProc\\assets\\models\\QC7-5236.stl",
+        "--force_generic_camera",
+        "--material_profile",
+        "E:\\BlenderProject\\BlenderProc\\defect_dataset_generator\\config\\qc7_5244_black_visual_material_candidate_v3.json"
+      ]
+    ],
+    "output_dir": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_front",
+    "raw_backend_output_dir": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_front",
+    "count": 1,
+    "total_requested": 1,
+    "total_succeeded": 1,
+    "total_failed": 0,
+    "failed_samples": [],
+    "target_profile": {
+      "model_id": "QC7-5244",
+      "appearance_color": "black",
+      "blend_path": "assets/models/moxing1_test.blend",
+      "stl_path": "assets/models/QC7-5236.stl",
+      "material_source": {
+        "mode": "manual_profile",
+        "path": "defect_dataset_generator/config/qc7_5244_black_visual_material_candidate_v3.json"
+      },
+      "preferred_backends": {
+        "black_dot": "generic_main_plane",
+        "foreign_material": "generic_main_plane",
+        "splay": "generic_main_plane",
+        "default": "generic_main_plane"
+      },
+      "supported_defects": [
+        "black_dot",
+        "foreign_material",
+        "splay"
+      ],
+      "default_anchor_sides": [
+        "back"
+      ],
+      "placement_policy": "front_back_main_planes_only",
+      "notes": [
+        "QC7-5236.stl is the geometry asset currently used for the QC7-5244 target.",
+        "The STL does not carry an accepted authored material; black appearance is constructed from defect_dataset_generator/config/qc7_5244_black_visual_material_candidate_v3.json.",
+        "This profile is smoke-ready for coverage generation, not final realism acceptance."
+      ],
+      "target_id": "qc7_5244_black"
+    },
+    "model_profile": "qc7_5244_black",
+    "defect_types": [
+      "foreign_material",
+      "splay"
+    ],
+    "anchor_sides": [
+      "front"
+    ],
+    "seeds_used": [
+      81700
+    ],
+    "render_samples": 16,
+    "placement_policy": "front_back_main_planes_only",
+    "material_source": {
+      "mode": "manual_profile",
+      "path": "defect_dataset_generator/config/qc7_5244_black_visual_material_candidate_v3.json"
+    },
+    "defect_generation_logic": {
+      "backend": "generic_main_plane_cooccurrence",
+      "shared_single_generic_function": "render_generic_main_plane_defects.create_defect",
+      "position_resampling_only": true
+    },
+    "camera": {
+      "mode": "randomized",
+      "profile": "light_domain_randomization_v1",
+      "distance_base": 2.2,
+      "distance_jitter_factor": [
+        -0.05,
+        0.05
+      ],
+      "distance_range": [
+        2.09,
+        2.31
+      ],
+      "azimuth_degrees": [
+        -15,
+        15
+      ],
+      "elevation_degrees": [
+        -10,
+        10
+      ],
+      "roll_degrees": [
+        -5,
+        5
+      ],
+      "focal_length_mm": [
+        65,
+        75
+      ],
+      "override_policy": "User-supplied values or ranges replace these defaults per profile or CLI config."
+    },
+    "lighting": {
+      "mode": "randomized",
+      "profile": "light_domain_randomization_v1",
+      "strength_base": 450,
+      "strength_jitter_factor": [
+        -0.2,
+        0.2
+      ],
+      "strength_range": [
+        360,
+        540
+      ],
+      "direction_jitter_degrees": [
+        -8,
+        8
+      ],
+      "area_size_base": 3.0,
+      "area_size_range": [
+        2.7,
+        3.3
+      ],
+      "background_brightness_base": 0.78,
+      "background_brightness_range": [
+        0.72,
+        0.84
+      ],
+      "override_policy": "User-supplied values or ranges replace these defaults per profile or CLI config."
+    },
+    "background": {
+      "mode": "randomized",
+      "profile": "light_domain_randomization_v1",
+      "color_base": [
+        0.78,
+        0.78,
+        0.78,
+        1.0
+      ],
+      "color_jitter_rgb": [
+        -0.03,
+        0.03
+      ],
+      "color_range_rgb": [
+        [
+          0.75,
+          0.81
+        ],
+        [
+          0.75,
+          0.81
+        ],
+        [
+          0.75,
+          0.81
+        ]
+      ],
+      "override_policy": "User-supplied color or RGB ranges replace these defaults per profile or CLI config."
+    },
+    "samples": [
+      {
+        "index": 0,
+        "seed": 81700,
+        "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_front\\rgb\\000000.png",
+        "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_front\\masks\\000000.png",
+        "label_yolo": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_front\\labels_yolo\\000000.txt",
+        "metadata": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_front\\metadata\\000000.json",
+        "defect_types": [
+          "foreign_material",
+          "splay"
+        ],
+        "defects": [
+          {
+            "defect_type": "foreign_material",
+            "class_id": 1,
+            "bbox": {
+              "xywh": [
+                788,
+                657,
+                6,
+                16
+              ],
+              "xyxy": [
+                788,
+                657,
+                794,
+                673
+              ],
+              "area_pixels": 96
+            },
+            "anchor_side": "front",
+            "main_plane_axis": "z",
+            "placement_policy": "front_back_main_planes_only",
+            "mask_by_class": null,
+            "placement_warning": null
+          },
+          {
+            "defect_type": "splay",
+            "class_id": 2,
+            "bbox": {
+              "xywh": [
+                966,
+                430,
+                12,
+                69
+              ],
+              "xyxy": [
+                966,
+                430,
+                978,
+                499
+              ],
+              "area_pixels": 828
+            },
+            "anchor_side": "front",
+            "main_plane_axis": "z",
+            "placement_policy": "front_back_main_planes_only",
+            "mask_by_class": null,
+            "placement_warning": null
+          }
+        ],
+        "status": "rendered",
+        "quality_checks": {
+          "rgb_exists": true,
+          "mask_exists": true,
+          "label_exists": true,
+          "metadata_exists": true,
+          "rgb_readable": true,
+          "mask_readable": true,
+          "mask_not_empty": true,
+          "rgb_not_blank": true,
+          "image_size_matches_mask": true,
+          "label_not_empty": true,
+          "label_bbox_in_0_1": true,
+          "label_line_count_matches_defects": true,
+          "metadata_defect_count_matches": true,
+          "rgb_not_overexposed": true,
+          "rgb_not_background_only": true,
+          "label_bbox_area_reasonable": true,
+          "rgb_luma_stats": {
+            "mean": 82.96974054972331,
+            "min": 3,
+            "max": 193
+          },
+          "rgb_exposure_stats": {
+            "mean": 82.96974054972331,
+            "min": 3,
+            "max": 193,
+            "range": 190,
+            "stddev": 51.44854220935676,
+            "edge_mean": 2.6852715810139975,
+            "sat250_fraction": 0.0,
+            "dark5_fraction": 6.993611653645833e-06
+          },
+          "mask_foreground_stats": {
+            "threshold": 127,
+            "foreground_pixels": 213,
+            "total_pixels": 1572864,
+            "foreground_fraction": 0.0001354217529296875
+          },
+          "passed": true
+        }
+      }
+    ],
+    "backend_log": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_front\\backend_run_log.json",
+    "generation_mode": "multi_defect_cooccurrence",
+    "quality_goal": "cooccurrence_proof_first_not_visual_realism"
+  }
+}

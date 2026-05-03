@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.2",
+  "calibration_type": "procedural_black_plastic_transfer_test",
+  "description": "Procedural approximation of QC71336 black plastic for QC7-5244 black smoke tests. This intentionally avoids transferring QC71336 UV texture maps because they create unrealistic streaks/bumps on QC7-5244.",
+  "source_model_id": "QC71336",
+  "source_appearance_color": "black",
+  "target_model_id": "QC7-5244",
+  "material_parameters": {
+    "base_color": [0.155, 0.162, 0.172, 1.0],
+    "roughness": 0.62,
+    "specular": 0.34,
+    "subsurface": 0.0,
+    "noise_scale": 145.0,
+    "noise_strength": 0.010,
+    "bump_strength": 0.0025,
+    "alpha": 1.0,
+    "notes": [
+      "Slightly cool deep gray base color.",
+      "Moderate roughness with weak specular to preserve soft plastic highlights.",
+      "Subtle procedural bump only; no image texture transfer."
+    ]
+  },
+  "placement_control": {
+    "use_preset_safe_anchor_windows": true,
+    "notes": [
+      "Use QC7-5244 preset safe zone to avoid slopes, inner grooves, holes, and strong geometry-transition areas."
+    ]
+  },
+  "scene_calibration": {
+    "light_strength": 430.0,
+    "exposure": 0.0,
+    "background_color": [0.72, 0.72, 0.72, 1.0],
+    "note": "Current black-dot backend records these scene fields but only material_parameters are used by the material override branch."
+  }
+}

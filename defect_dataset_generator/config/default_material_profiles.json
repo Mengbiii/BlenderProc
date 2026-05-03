@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.1",
+  "description": "Default visual material calibration profiles by model/color target. These are visually fitted defaults, not physical BRDF recovery results.",
+  "profiles": {
+    "qc7_5244_black": {
+      "model_id": "QC7-5244",
+      "appearance_color": "black",
+      "status": "under_audit_needs_v2_visual_fit",
+      "default_material_path": "outputs/fitting/fit_qc7_5244_black_material_v1/best_material.json",
+      "reference_image": "E:/BlenderProject/BlenderProc/塑料工件真实数据集/QC7-5244黑色/QC9-0852-正常/9K9A0793.JPG",
+      "roi_mask": "outputs/calibration/qc7_5244_black_material_reference/qc7_5244_black_9K9A0793_material_roi_v1.png",
+      "fit_output_dir": "outputs/fitting/fit_qc7_5244_black_material_v1",
+      "latest_v2_fit_output_dir": "outputs/fitting/fit_qc7_5244_black_material_v2",
+      "latest_v2_status": "tested_not_accepted_multi_roi_score_lower_than_v1",
+      "best_candidate_id": 20,
+      "best_score": 0.95552,
+      "material_parameters": {
+        "base_color": [0.09, 0.088, 0.084, 1.0],
+        "roughness": 0.38,
+        "specular": 0.4,
+        "subsurface": 0.0,
+        "noise_scale": 36.0,
+        "noise_strength": 0.006,
+        "bump_strength": 0.01,
+        "alpha": 1.0,
+        "specular_ior_level": 0.4,
+        "translucency": 0.0
+      },
+      "scene_calibration": {
+        "light_strength": 380.0,
+        "exposure": -0.15,
+        "camera_profile": "deterministic_ortho_front",
+        "render_resolution": [512, 384],
+        "background_color": [0.55, 0.55, 0.55, 1.0]
+      },
+      "acceptance_status": "rejected_for_final_default_after_human_visual_check",
+      "notes": [
+        "Human visual review found this v1 material too dark, too uniform, and too matte/CGI-like despite its high single-ROI score.",
+        "A V2 cool-gray/texture search was tested but did not improve the current multi-ROI diagnostic score.",
+        "Next improvement should align clean candidate camera/scene calibration before more material search.",
+        "Use this only as a diagnostic baseline until a V2 material passes multi-ROI audit and human visual inspection.",
+        "Do not reuse for QC7-5244 white or other black models without separate fitting.",
+        "Defect generation remains blocked for production until the material appearance is accepted."
+      ]
+    }
+  }
+}

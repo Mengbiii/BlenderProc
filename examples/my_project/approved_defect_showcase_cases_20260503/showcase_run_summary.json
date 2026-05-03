@@ -1,0 +1,178 @@
+﻿[
+    {
+        "mode":  "single",
+        "target":  "qc71336_black",
+        "defect":  "foreign_material",
+        "side":  "front",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_black\\foreign_material\\side_front"
+    },
+    {
+        "mode":  "single",
+        "target":  "qc71336_black",
+        "defect":  "foreign_material",
+        "side":  "back",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_black\\foreign_material\\side_back"
+    },
+    {
+        "mode":  "single",
+        "target":  "qc71336_black",
+        "defect":  "splay",
+        "side":  "front",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_black\\splay\\side_front"
+    },
+    {
+        "mode":  "single",
+        "target":  "qc71336_black",
+        "defect":  "splay",
+        "side":  "back",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_black\\splay\\side_back"
+    },
+    {
+        "mode":  "single",
+        "target":  "qc71336_white",
+        "defect":  "foreign_material",
+        "side":  "front",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_white\\foreign_material\\side_front"
+    },
+    {
+        "mode":  "single",
+        "target":  "qc71336_white",
+        "defect":  "foreign_material",
+        "side":  "back",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_white\\foreign_material\\side_back"
+    },
+    {
+        "mode":  "single",
+        "target":  "qc71336_gray",
+        "defect":  "mixed_color_contamination",
+        "side":  "front",
+        "exit":  1,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_gray\\mixed_color_contamination\\side_front"
+    },
+    {
+        "mode":  "single",
+        "target":  "qc71336_gray",
+        "defect":  "mixed_color_contamination",
+        "side":  "back",
+        "exit":  1,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_gray\\mixed_color_contamination\\side_back"
+    },
+    {
+        "mode":  "single",
+        "target":  "qc7_5244_black",
+        "defect":  "foreign_material",
+        "side":  "front",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_black\\foreign_material\\side_front"
+    },
+    {
+        "mode":  "single",
+        "target":  "qc7_5244_black",
+        "defect":  "foreign_material",
+        "side":  "back",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_black\\foreign_material\\side_back"
+    },
+    {
+        "mode":  "single",
+        "target":  "qc7_5244_black",
+        "defect":  "splay",
+        "side":  "front",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_black\\splay\\side_front"
+    },
+    {
+        "mode":  "single",
+        "target":  "qc7_5244_black",
+        "defect":  "splay",
+        "side":  "back",
+        "exit":  1,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_black\\splay\\side_back"
+    },
+    {
+        "mode":  "single",
+        "target":  "qc7_5244_white",
+        "defect":  "mixed_color_contamination",
+        "side":  "front",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_white\\mixed_color_contamination\\side_front"
+    },
+    {
+        "mode":  "single",
+        "target":  "qc7_5244_white",
+        "defect":  "mixed_color_contamination",
+        "side":  "back",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_white\\mixed_color_contamination\\side_back"
+    },
+    {
+        "mode":  "single",
+        "target":  "ql3_1052_black",
+        "defect":  "foreign_material",
+        "side":  "front",
+        "exit":  1,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\ql3_1052_black\\foreign_material\\side_front"
+    },
+    {
+        "mode":  "single",
+        "target":  "ql3_1052_black",
+        "defect":  "foreign_material",
+        "side":  "side",
+        "exit":  1,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\ql3_1052_black\\foreign_material\\side_side"
+    },
+    {
+        "mode":  "single",
+        "target":  "ql3_1052_black",
+        "defect":  "splay",
+        "side":  "front",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\ql3_1052_black\\splay\\side_front"
+    },
+    {
+        "mode":  "single",
+        "target":  "ql3_1052_black",
+        "defect":  "splay",
+        "side":  "side",
+        "exit":  1,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\ql3_1052_black\\splay\\side_side"
+    },
+    {
+        "mode":  "cooccurrence",
+        "target":  "qc71336_black",
+        "defect":  "foreign_material,splay",
+        "side":  "front",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc71336_black\\foreign_material_splay\\side_front"
+    },
+    {
+        "mode":  "cooccurrence",
+        "target":  "qc71336_black",
+        "defect":  "foreign_material,splay",
+        "side":  "back",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc71336_black\\foreign_material_splay\\side_back"
+    },
+    {
+        "mode":  "cooccurrence",
+        "target":  "qc7_5244_black",
+        "defect":  "foreign_material,splay",
+        "side":  "front",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_front"
+    },
+    {
+        "mode":  "cooccurrence",
+        "target":  "qc7_5244_black",
+        "defect":  "foreign_material,splay",
+        "side":  "back",
+        "exit":  0,
+        "out":  "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_back"
+    }
+]

@@ -1,0 +1,189 @@
+{
+  "updated_at_local": "2026-05-03 14:23:11",
+  "root": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503",
+  "case_count": 22,
+  "cases": [
+    {
+      "case": "cooccurrence/qc71336_black/foreign_material_splay/side_back",
+      "bbox": [
+        735,
+        458,
+        53,
+        90
+      ],
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc71336_black\\foreign_material_splay\\side_back\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc71336_black\\foreign_material_splay\\side_back\\masks\\000000.png"
+    },
+    {
+      "case": "cooccurrence/qc71336_black/foreign_material_splay/side_front",
+      "bbox": [
+        725,
+        488,
+        59,
+        52
+      ],
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc71336_black\\foreign_material_splay\\side_front\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc71336_black\\foreign_material_splay\\side_front\\masks\\000000.png"
+    },
+    {
+      "case": "cooccurrence/qc7_5244_black/foreign_material_splay/side_back",
+      "bbox": null,
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_back\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_back\\masks\\000000.png"
+    },
+    {
+      "case": "cooccurrence/qc7_5244_black/foreign_material_splay/side_front",
+      "bbox": null,
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_front\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\cooccurrence\\qc7_5244_black\\foreign_material_splay\\side_front\\masks\\000000.png"
+    },
+    {
+      "case": "single/qc71336_black/foreign_material/side_back",
+      "bbox": [
+        755,
+        504,
+        13,
+        12
+      ],
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_black\\foreign_material\\side_back\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_black\\foreign_material\\side_back\\masks\\000000.png"
+    },
+    {
+      "case": "single/qc71336_black/foreign_material/side_front",
+      "bbox": [
+        767,
+        508,
+        7,
+        4
+      ],
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_black\\foreign_material\\side_front\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_black\\foreign_material\\side_front\\masks\\000000.png"
+    },
+    {
+      "case": "single/qc71336_black/splay/side_back",
+      "bbox": [
+        692,
+        490,
+        55,
+        41
+      ],
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_black\\splay\\side_back\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_black\\splay\\side_back\\masks\\000000.png"
+    },
+    {
+      "case": "single/qc71336_black/splay/side_front",
+      "bbox": [
+        745,
+        501,
+        38,
+        21
+      ],
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_black\\splay\\side_front\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_black\\splay\\side_front\\masks\\000000.png"
+    },
+    {
+      "case": "single/qc71336_gray/mixed_color_contamination/side_back",
+      "bbox": null,
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_gray\\mixed_color_contamination\\side_back\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_gray\\mixed_color_contamination\\side_back\\masks\\000000.png"
+    },
+    {
+      "case": "single/qc71336_gray/mixed_color_contamination/side_front",
+      "bbox": null,
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_gray\\mixed_color_contamination\\side_front\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_gray\\mixed_color_contamination\\side_front\\masks\\000000.png"
+    },
+    {
+      "case": "single/qc71336_white/foreign_material/side_back",
+      "bbox": [
+        842,
+        514,
+        4,
+        5
+      ],
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_white\\foreign_material\\side_back\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_white\\foreign_material\\side_back\\masks\\000000.png"
+    },
+    {
+      "case": "single/qc71336_white/foreign_material/side_front",
+      "bbox": [
+        391,
+        625,
+        6,
+        4
+      ],
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_white\\foreign_material\\side_front\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc71336_white\\foreign_material\\side_front\\masks\\000000.png"
+    },
+    {
+      "case": "single/qc7_5244_black/foreign_material/side_back",
+      "bbox": null,
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_black\\foreign_material\\side_back\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_black\\foreign_material\\side_back\\masks\\000000.png"
+    },
+    {
+      "case": "single/qc7_5244_black/foreign_material/side_front",
+      "bbox": null,
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_black\\foreign_material\\side_front\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_black\\foreign_material\\side_front\\masks\\000000.png"
+    },
+    {
+      "case": "single/qc7_5244_black/splay/side_back",
+      "bbox": null,
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_black\\splay\\side_back\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_black\\splay\\side_back\\masks\\000000.png"
+    },
+    {
+      "case": "single/qc7_5244_black/splay/side_front",
+      "bbox": null,
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_black\\splay\\side_front\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_black\\splay\\side_front\\masks\\000000.png"
+    },
+    {
+      "case": "single/qc7_5244_white/mixed_color_contamination/side_back",
+      "bbox": [
+        840,
+        509,
+        17,
+        6
+      ],
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_white\\mixed_color_contamination\\side_back\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_white\\mixed_color_contamination\\side_back\\masks\\000000.png"
+    },
+    {
+      "case": "single/qc7_5244_white/mixed_color_contamination/side_front",
+      "bbox": [
+        861,
+        512,
+        25,
+        9
+      ],
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_white\\mixed_color_contamination\\side_front\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\qc7_5244_white\\mixed_color_contamination\\side_front\\masks\\000000.png"
+    },
+    {
+      "case": "single/ql3_1052_black/foreign_material/side_front",
+      "bbox": null,
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\ql3_1052_black\\foreign_material\\side_front\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\ql3_1052_black\\foreign_material\\side_front\\masks\\000000.png"
+    },
+    {
+      "case": "single/ql3_1052_black/foreign_material/side_side",
+      "bbox": null,
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\ql3_1052_black\\foreign_material\\side_side\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\ql3_1052_black\\foreign_material\\side_side\\masks\\000000.png"
+    },
+    {
+      "case": "single/ql3_1052_black/splay/side_front",
+      "bbox": null,
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\ql3_1052_black\\splay\\side_front\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\ql3_1052_black\\splay\\side_front\\masks\\000000.png"
+    },
+    {
+      "case": "single/ql3_1052_black/splay/side_side",
+      "bbox": null,
+      "rgb": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\ql3_1052_black\\splay\\side_side\\rgb\\000000.png",
+      "mask": "E:\\BlenderProject\\BlenderProc\\examples\\my_project\\approved_defect_showcase_cases_20260503\\single\\ql3_1052_black\\splay\\side_side\\masks\\000000.png"
+    }
+  ]
+}
