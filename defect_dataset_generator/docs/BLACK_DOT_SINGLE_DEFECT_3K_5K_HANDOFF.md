@@ -1,6 +1,6 @@
 # Black Dot Single-Defect 3k-5k Generation Handoff
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
 This handoff is for the next Codex session. Scope is **single-defect black-dot generation only**. Do not include any same-scene multi-defect/cooccurrence combinations in this pass.
 
@@ -32,11 +32,11 @@ Use the row matching the final dataset size requested by the user. If the final 
 
 | Target | Defect | Backend | Current status | Action |
 | --- | --- | --- | --- | --- |
-| `p101040_blue` | `black_dot` | `reference_blackdot` | Generates, but prior batch was `27/28`; visual realism still needs calibration. | Run only after confirming front/back both render visibly. Stop if back side is unsupported or black dots are too strong/too faint. |
+| `p101040_blue` | `black_dot` | `reference_blackdot` | Accepted for current single-defect black-dot plan, but still needs production spot checks and realism calibration if time allows. | Generate only after smoke confirms RGB/mask visibility for the requested side. |
 | `qc71336_white` | `black_dot` | `reference_blackdot` | Passed front/back visual checks. | Generate. |
 | `qc71336_gray` | `black_dot` | `reference_blackdot` | Passed front/back visual checks. | Generate. |
-| `qc7_5244_white` | `black_dot` | `reference_blackdot` | Front passed; back was not fully accepted in earlier smoke. | Re-test back first, then generate only if RGB/mask pass. |
-| `qc7_5244_black` | `black_dot` | `generic_main_plane` | Not accepted: black dot was too tiny/weak in earlier smoke. | Do not launch large batch until fixed and re-verified. |
+| `qc7_5244_white` | `black_dot` | `reference_blackdot` | Front/back accepted by the user. | Generate, with production spot checks. |
+| `qc7_5244_black` | `black_dot` | `generic_main_plane` | Front/back accepted by the user after review. | Generate, with production spot checks. |
 
 `qc71336_black` and `ql3_1052_black` are not black-dot targets in the current profile registry.
 
@@ -101,7 +101,9 @@ Important: `qc7_5244_white` maps to backend model key `QC75244_white` for histor
 | QC7-5244 black front | `qc7_5244_black` | `defect_dataset_generator/blender_scripts/render_generic_main_plane_defects.py` | `generic_main_plane` | `assets/models/moxing1_test.blend`, `assets/models/QC7-5236.stl`, material profile `defect_dataset_generator/config/qc7_5244_black_visual_material_candidate_v3.json` | `front` |
 | QC7-5244 black back | `qc7_5244_black` | same | same | same | `back` |
 
-Do not run this combo as a large batch yet. Its previous RGB black dot was too tiny/weak. Fix and smoke-test it first.
+This combo was previously blocked for weak visibility, but the user later
+accepted front/back. Still run a tiny smoke before large production and inspect
+RGB/mask manually.
 
 ## Preset Parameters To Verify Before Running
 
@@ -217,7 +219,8 @@ qc7_5244_white
 
 ### QC7-5244 Black
 
-Do not run the large `qc7_5244_black black_dot` batch yet. First fix visibility, then run a small smoke:
+Run a small smoke before production because this combo had earlier visibility
+issues, even though it is now accepted:
 
 ```powershell
 D:\Anaconda\envs\defect_eval\python.exe defect_dataset_generator\app.py generate-target --target qc7_5244_black --defects black_dot --count 8 --out E:\BlenderProject\BlenderProc\defect_dataset_generator\outputs\dataset\blackdot_fix_smoke_YYYYMMDD\single\qc7_5244_black\black_dot\side_front --samples 16 --seed 51000 --anchor-sides front
@@ -227,7 +230,8 @@ D:\Anaconda\envs\defect_eval\python.exe defect_dataset_generator\app.py generate
 D:\Anaconda\envs\defect_eval\python.exe defect_dataset_generator\app.py generate-target --target qc7_5244_black --defects black_dot --count 8 --out E:\BlenderProject\BlenderProc\defect_dataset_generator\outputs\dataset\blackdot_fix_smoke_YYYYMMDD\single\qc7_5244_black\black_dot\side_back --samples 16 --seed 51100 --anchor-sides back
 ```
 
-Only promote it to production after manual RGB/mask review confirms visible, correctly located black dots on both sides.
+Proceed to production only after the new smoke confirms visible, correctly
+located black dots on both sides.
 
 ## Seed Allocation
 

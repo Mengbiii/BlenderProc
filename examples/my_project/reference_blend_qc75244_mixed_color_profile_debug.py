@@ -418,7 +418,7 @@ def configure_cycles_gpu(samples):
     }
 
 
-def tune_reference_lighting_for_white():
+def tune_reference_lighting_for_white(base_energy_multiplier=1.0):
     scene = bpy.context.scene
     energy_scale_map = {
         "Area": 0.12,
@@ -441,7 +441,7 @@ def tune_reference_lighting_for_white():
             elif obj.name in cool_lights:
                 light.color = (0.97, 0.976, 0.988)
         base_energy = 2000.0 if light.type == "AREA" else 500.0
-        light.energy = base_energy * scale
+        light.energy = base_energy * scale * base_energy_multiplier
         if light.type == "AREA":
             light.shape = "RECTANGLE"
             if obj.name == "Area.003":
@@ -2548,7 +2548,8 @@ def main():
     if args.stl:
         apply_replacement_camera_tweak(camera, primary_obj, args.stl)
     render_device_info = configure_cycles_gpu(args.samples)
-    tune_reference_lighting_for_white()
+    back_only = tuple(requested_sides) == ("back",)
+    tune_reference_lighting_for_white(base_energy_multiplier=1.5 if back_only else 1.0)
     material_info = assign_white_material(primary_obj)
     bpy.context.view_layer.update()
 

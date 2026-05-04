@@ -1,6 +1,6 @@
 # Approved Non-Black Defect 3k Filler Generation Handoff
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
 This handoff is for the next Codex session. Scope is the approved non-black-dot defect portion of the final 3k-5k synthetic dataset, plus the approved same-scene non-black cooccurrence blocks.
 
@@ -14,7 +14,14 @@ Do not change the black-dot single-defect counts that are already running. Use t
 
 ## Goal
 
-Generate only combinations that the user has manually accepted as passing. Use GPU rendering, keep domain randomization enabled, split front/back or front/side in exact 1:1 blocks, and manually inspect RGB and mask outputs after every block.
+Generate only combinations that the user has manually accepted as passing. Use
+GPU rendering, keep domain randomization enabled, split front/back or front/side
+in exact 1:1 blocks, and manually inspect RGB and mask outputs after every
+block.
+
+As of 2026-05-04, this document remains the active non-black filler plan. The UI
+cooccurrence selector is intentionally limited to the two cooccurrence rows in
+this document.
 
 ## Current Scope Rules
 

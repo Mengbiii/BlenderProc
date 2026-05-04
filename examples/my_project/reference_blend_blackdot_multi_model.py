@@ -129,6 +129,10 @@ def parse_args():
     parser.add_argument("--object_transform_camera_side", choices=["front", "back"], default="front")
     parser.add_argument("--object_rotate_deg", nargs=3, type=float, default=None, metavar=("RX", "RY", "RZ"))
     parser.add_argument("--object_translate", nargs=3, type=float, default=[0.0, 0.0, 0.0], metavar=("X", "Y", "Z"))
+    parser.add_argument("--safe_anchor_local_x", nargs=2, type=float, default=None, metavar=("MIN", "MAX"))
+    parser.add_argument("--safe_anchor_local_y", nargs=2, type=float, default=None, metavar=("MIN", "MAX"))
+    parser.add_argument("--safe_anchor_local_z_abs_min", type=float, default=0.0)
+    parser.add_argument("--safe_anchor_normal_z_min", type=float, default=0.0)
     parser.add_argument("--max_attempts_per_image", type=int, default=12)
     parser.add_argument("--save_blend", action="store_true")
     parser.add_argument("--save_blend_only_first", action="store_true", default=True)
@@ -141,6 +145,25 @@ def parse_args():
     args = parser.parse_args(argv)
     args.model = canonical_model_name(args.model)
     return args
+
+
+def apply_cli_safe_anchor_window(args):
+    global EXTERNAL_PLACEMENT_CONTROL
+    if args.safe_anchor_local_x is None and args.safe_anchor_local_y is None:
+        return
+    x_range = args.safe_anchor_local_x or [-1.0, 1.0]
+    y_range = args.safe_anchor_local_y or [-1.0, 1.0]
+    EXTERNAL_PLACEMENT_CONTROL = {
+        "safe_anchor_windows": [
+            {
+                "name": "cli_safe_anchor_window",
+                "local_x": [float(x_range[0]), float(x_range[1])],
+                "local_y": [float(y_range[0]), float(y_range[1])],
+                "local_z_abs_min": float(args.safe_anchor_local_z_abs_min),
+                "normal_z_min": float(args.safe_anchor_normal_z_min),
+            }
+        ]
+    }
 
 
 def mkdir(path):
@@ -1834,6 +1857,7 @@ def write_notes(output_dir, args, preset):
 
 def main():
     args = parse_args()
+    apply_cli_safe_anchor_window(args)
     preset = MODEL_PRESETS[args.model]
     output_dir = mkdir(Path(args.output).resolve())
     rgb_dir = mkdir(output_dir / "rgb")

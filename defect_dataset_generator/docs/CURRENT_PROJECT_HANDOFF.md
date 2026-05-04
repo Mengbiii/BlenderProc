@@ -1,18 +1,31 @@
 # Current Project Handoff
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
-This handoff is for the next Codex session. The current project is a BlenderProc-based synthetic defect dataset generator for plastic workpieces. The immediate goal is to produce a reliable 400-500 image pilot dataset first, then scale to 3k-5k only after every active model/color/defect combination passes structural checks, visual review, and non-YOLO image/defect quality evaluation.
+This handoff is for the next Codex session. The current project is a
+BlenderProc-based synthetic defect dataset generator for plastic workpieces.
+The immediate goal is now to continue safe 3k-5k dataset construction using
+only user-accepted combinations, while preserving manual RGB/mask inspection as
+the final acceptance gate.
+
+For the newest usage-oriented handoff, also read:
+
+```text
+defect_dataset_generator/docs/SYSTEM_USAGE_GUIDE.md
+defect_dataset_generator/docs/NEXT_CODEX_HANDOFF_2026_05_04.md
+```
 
 ## Current Priority
 
-Do not jump straight to the 3k-5k generation run. The current priority is:
+The current priority is:
 
 1. Keep the existing target-specific scripts and profiles intact.
-2. Improve generation throughput without changing visual behavior.
-3. Generate a 400-500 image pilot using GPU rendering.
-4. Review RGB/mask/label/metadata quality per target + color + defect.
-5. Use image-quality and defect-realism metrics to guide the next parameter tuning pass.
+2. Continue 3k-5k dataset generation with GPU rendering.
+3. Use only combinations manually accepted by the user.
+4. Keep front/back at 1:1 for non-QL3 targets.
+5. Keep front/side at 1:1 for QL3.
+6. Inspect RGB and mask outputs after every block.
+7. Use evaluation scripts only as support; do not replace manual inspection.
 
 The user explicitly wants cautious changes. Many targets depend on specific scripts, material profiles, reference scenes, and model files. Do not replace a reference/specialized backend with a generic backend just for speed.
 
@@ -25,17 +38,17 @@ defect_dataset_generator/config/model_color_defect_targets.json
 defect_dataset_generator/config/model_color_profiles.json
 ```
 
-Active combinations:
+Active accepted combinations:
 
 | Target | Active defects | Required sides | Current backend state |
 | --- | --- | --- | --- |
-| `p101040_blue` | `black_dot` | front/back cases required for dataset coverage | `reference_blackdot`; now batch-optimized for count > 1. |
-| `qc71336_black` | `foreign_material`, `splay` | front/back required | QC71336 black reference backend. Single defects and `foreign_material+splay` same-scene cooccurrence are connected to the dedicated reference script. |
-| `qc71336_white` | `black_dot`, `foreign_material` | front/back required | Black dot uses `reference_blackdot`; foreign material uses QC71336 white reference backend. Main-plane roughness was intended to be slightly increased with black version. |
-| `qc71336_gray` | `black_dot`, `mixed_color_contamination` | front/back required | Black dot uses `reference_blackdot`; mixed color uses generic main-plane. Both were lightly tuned only; do not make large logic changes yet. |
-| `qc7_5244_black` | `black_dot`, `foreign_material`, `splay` | front/back required | Generic main-plane with manual black material profile. `foreign_material`, `splay`, and `foreign_material+splay` cooccurrence front/back were manually accepted on 2026-05-03. `black_dot` still fails as too small/weak. |
-| `qc7_5244_white` | `black_dot`, `mixed_color_contamination` | front/back required | Black dot uses `reference_blackdot`; mixed color uses specialized QC75244 mixed-color reference backend. `mixed_color_contamination` front/back was manually accepted on 2026-05-03. |
-| `ql3_1052_black` | `foreign_material`, `splay` | QL3 excludes back; use front/side only | Generic main-plane using `QL3-black.blend`. On 2026-05-03 the user accepted the defect appearance for `foreign_material` and `splay`; the script was fixed so explicit `--anchor-sides front` and `--anchor-sides side` are no longer overridden by defect type. |
+| `p101040_blue` | `black_dot` | front/back where supported by command/profile | `reference_blackdot`; batch-optimized. Spot-check every production block. |
+| `qc71336_black` | `foreign_material`, `splay`, `foreign_material+splay` | front/back | QC71336 black reference backend. Single defects and approved cooccurrence are connected to the dedicated reference script. |
+| `qc71336_white` | `black_dot`, `foreign_material` | front/back | Black dot uses `reference_blackdot`; foreign material uses QC71336 white reference backend. User accepted the previously disputed foreign-material front/back cases. |
+| `qc71336_gray` | `black_dot`, `mixed_color_contamination` | front/back | Black dot uses `reference_blackdot`; mixed color uses generic main-plane. User accepted mixed-color front/back after back-camera logic was corrected. |
+| `qc7_5244_black` | `black_dot`, `foreign_material`, `splay`, `foreign_material+splay` | front/back | Generic main-plane with manual black material profile. User accepted black dot, foreign material, splay, and approved cooccurrence front/back. |
+| `qc7_5244_white` | `black_dot`, `mixed_color_contamination` | front/back | Black dot uses `reference_blackdot`; mixed color uses specialized QC75244 mixed-color reference backend. User accepted black-dot back and mixed-color front/back. |
+| `ql3_1052_black` | `foreign_material`, `splay` | front/side only | Generic main-plane using `QL3-black.blend`. User accepted defect appearance after placement bug was fixed. Cooccurrence is cancelled. |
 
 Excluded:
 
@@ -56,6 +69,8 @@ Production generation handoff docs:
 ```text
 defect_dataset_generator/docs/BLACK_DOT_SINGLE_DEFECT_3K_5K_HANDOFF.md
 defect_dataset_generator/docs/APPROVED_NON_BLACK_DEFECT_3K_FILLER_HANDOFF.md
+defect_dataset_generator/docs/SYSTEM_USAGE_GUIDE.md
+defect_dataset_generator/docs/NEXT_CODEX_HANDOFF_2026_05_04.md
 ```
 
 Primary commands:
@@ -120,8 +135,9 @@ Same-scene multi-defect generation exists for generic-equivalent combinations. T
 Current safe scope:
 
 - `qc71336_black` can co-occur `foreign_material` and `splay` through the dedicated QC71336 black reference script. Use `generate-target-cooccurrence --target qc71336_black --defects foreign_material,splay`; it routes to `--defect_type foreign_material_splay`, not generic fallback.
-- `qc7_5244_black` can co-occur `black_dot`, `foreign_material`, and `splay` through the generic backend.
+- `qc7_5244_black` can co-occur `foreign_material` and `splay` through the generic backend.
 - `ql3_1052_black` co-occurrence is cancelled for the current plan. Keep QL3 to single `foreign_material` and single `splay` front/side only.
+- Black-dot-containing cooccurrence is not listed in the current plan and should not be run without new user approval.
 
 Current caution:
 
