@@ -65,7 +65,7 @@ For `real_reference_vs_top_candidate`, `plastic_material` produced:
 }
 ```
 
-This is more interpretable for thesis reporting than the baseline score because each term corresponds to a material appearance cue.
+This is more interpretable for technical reporting than the baseline score because each term corresponds to a material appearance cue.
 
 ## Observations
 
@@ -77,7 +77,7 @@ This is more interpretable for thesis reporting than the baseline score because 
 
 ## Human-Judgment Match
 
-The new score is better for thesis explanation because it measures material-related cues directly. However, this validation does not prove better ranking across all candidates.
+The new score is better for technical explanation because it measures material-related cues directly. However, this validation does not prove better ranking across all candidates.
 
 The top/worst mismatch is likely caused by:
 
@@ -116,7 +116,7 @@ mask ROI score spread:   0.005646
 
 This confirms that mask ROI plumbing is working, but also shows that the approximate rectangular mask is not yet enough to create a strong perceptual separation.
 
-## Thesis Wording
+## Suggested Technical Wording
 
 Suggested wording:
 

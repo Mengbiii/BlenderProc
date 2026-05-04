@@ -112,12 +112,12 @@ the current 3-5k dataset handoff only uses approved single black-dot generation.
 9. Disable `Dry run only` only when the command is correct.
 10. Run again, then use `Load Results` to preview `rgb` and `masks`.
 
-## Notes for Thesis
+## Technical Notes
 
 This UI can be described as the system interaction layer. It exposes the
 synthetic defect generation pipeline to non-command-line users and connects
 profile selection, generation parameter configuration, command execution,
 logging, and image/mask preview in one tool.
 
-For screenshots, use the UI after loading a small run output so the preview and
-summary panels are populated.
+For technical screenshots, use the UI after loading a small run output so the
+preview and summary panels are populated.

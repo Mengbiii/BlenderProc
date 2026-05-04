@@ -77,7 +77,7 @@ Optional optimization uses:
 - Goal: compare real and synthetic images using brightness, color, SSIM, edge/texture, and optional LPIPS.
 - Input: real image and candidate render.
 - Output: per-metric score and weighted score.
-- Current state: Pillow baseline is implemented with brightness, color histogram, global SSIM approximation, edge/texture, ROI modes including manual ROI and mask ROI, CLI, JSON output, and validation. The `plastic_material` profile adds brightness, color, local contrast, highlight, texture, and low-weight SSIM components with thesis-oriented documentation.
+- Current state: Pillow baseline is implemented with brightness, color histogram, global SSIM approximation, edge/texture, ROI modes including manual ROI and mask ROI, CLI, JSON output, and validation. The `plastic_material` profile adds brightness, color, local contrast, highlight, texture, and low-weight SSIM components with technical reporting documentation.
 - Next implementation tasks: validate true material-mask ROI behavior on more real reference photos, consider CIELAB Delta E, improve highlight discrimination, and keep LPIPS optional.
 - Risks: comparing whole images can reward background instead of product material; ROI selection is essential; the current plastic score can still disagree with human judgment for subtle candidates.
 - Priority: high.

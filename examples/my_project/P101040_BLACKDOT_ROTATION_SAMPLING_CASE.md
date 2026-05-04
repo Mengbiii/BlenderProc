@@ -2,9 +2,9 @@
 
 Last updated: 2026-05-04
 
-This case is for thesis/demo evidence. It proves that the system can keep the
-camera and lighting fixed while rotating/translating the product object itself
-and rendering a black-dot sample after each fixed angular step.
+This case is for technical demo evidence. It proves that the system can keep
+the camera and lighting fixed while rotating/translating the product object
+itself and rendering a black-dot sample after each fixed angular step.
 
 ## Interference Policy
 
@@ -60,7 +60,7 @@ unless GPU contention is acceptable.
 | `--rotation-axis z` | Rotate the model around the world Z axis. This keeps the front face visible for a clear paper figure. |
 | `--translation-direction 1,0,0` | Translate along the world X direction. |
 | `--translation-distance 0.01` | Apply a fixed 0.01-unit object translation to every frame. Larger values can push the dot out of frame at some rotation angles. |
-| `--samples 16` | Low-to-medium sample count suitable for a thesis demonstration figure. Increase if needed. |
+| `--samples 16` | Low-to-medium sample count suitable for a technical demonstration figure. Increase if needed. |
 | `--seed 90504` | Fixed seed so the black-dot placement is stable across frames. |
 | `--safe-anchor-local-x=-0.28,0.28` | Restrict the black-dot anchor to the central local-X band so all rotation angles keep the dot visible. |
 | `--safe-anchor-local-y=-0.28,0.28` | Restrict the black-dot anchor to the central local-Y band so all rotation angles keep the dot visible. |

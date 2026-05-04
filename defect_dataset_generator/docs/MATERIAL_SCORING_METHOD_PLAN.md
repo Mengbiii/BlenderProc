@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define a thesis-reportable visual material calibration score for injection-molded plastic parts.
+Define a technical-report-friendly visual material calibration score for injection-molded plastic parts.
 
 The score is used to rank rendered clean material candidates against real reference photos. It focuses on clean plastic material regions, not whole-image similarity and not defect appearance.
 
@@ -25,7 +25,7 @@ The current baseline score combines brightness, color histogram, global SSIM app
 - Whole-image or broad center ROI scoring can be dominated by background, shadows, logo/text, and object pose.
 - Gloss/matte behavior is not explicitly measured.
 - Local plastic surface variation is not separated from object edges.
-- The score is hard to justify as a material-focused method in a thesis.
+- The score is hard to justify as a material-focused method in technical reporting.
 
 ## New Score Profile
 
@@ -217,9 +217,9 @@ Record whether `plastic_material` better matches human judgment. If it does not,
 - Highlight statistics are approximate and depend on exposure.
 - Texture statistics do not understand true molded micro-geometry.
 
-## Thesis Wording
+## Suggested Technical Wording
 
-Suggested thesis wording:
+Suggested wording:
 
 > The proposed material calibration score is not intended to recover physically accurate BRDF parameters. Instead, it is a deterministic visual ranking metric for rendered material candidates. The score is computed within a clean plastic ROI and combines brightness, color tone, local contrast, highlight behavior, texture cues, and a low-weight structural similarity term. This design emphasizes appearance cues relevant to injection-molded plastic parts while reducing the influence of background and object-level geometry.
 

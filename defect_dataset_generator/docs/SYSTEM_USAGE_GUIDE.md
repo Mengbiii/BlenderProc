@@ -179,8 +179,6 @@ reopens and accepts those combinations.
 ## Dataset Construction Policy
 
 - Final target is 3k-5k synthetic samples.
-- User confirmed the final thesis/data target should be treated as 15000+ words,
-  but dataset generation remains a separate 3k-5k image task.
 - Black-dot single-defect generation is the primary current dataset portion.
 - Non-black accepted defects fill the remaining images to reach at least 3k.
 - Use GPU rendering.
@@ -229,7 +227,8 @@ If a dry-run folder is loaded, `rgb` and `masks` may be empty. That is expected.
 
 ## P101040 Rotation Sampling Case
 
-Use this only as a thesis/demo case. It is isolated from production generation.
+Use this only as a technical demo case. It is isolated from production
+generation.
 
 Guide:
 
@@ -256,23 +255,6 @@ Verified facts:
 - RGB/mask exist for every angle.
 - Empty mask count is 0.
 - Mask aligns with the black dot.
-
-## Thesis Draft Files
-
-Latest expanded draft:
-
-```text
-C:\Users\meng'bi\Desktop\毕业设计\毕业论文草稿_合成缺陷数据集生成系统_扩充到1w3_20260504.docx
-```
-
-School requirement confirmed by user:
-
-```text
-毕业论文字数 15000 以上
-```
-
-The current draft is only an intermediate 13k-character draft and still needs
-expansion, formatting, figures, tables, English abstract, and final polishing.
 
 ## Known Cautions
 

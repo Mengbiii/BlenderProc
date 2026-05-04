@@ -21,8 +21,6 @@ plastic workpieces. The next work is to verify the updated docs, continue safe
 ## Current Important User Decisions
 
 - Final dataset target is 3k-5k images.
-- Thesis word requirement is confirmed as 15000+ Chinese words/characters by
-  the user. Current draft is only an intermediate draft.
 - Model files should not be pushed to GitHub. The user will provide models by
   network disk.
 - Black-dot-containing cooccurrence is not in the current generation plan.
@@ -160,30 +158,8 @@ Verified output:
 examples\my_project\P101040_BLACKDOT_ROTATION_CASE_20260504_V3
 ```
 
-Use it as thesis/demo evidence only. It is isolated from production generation.
-
-## Thesis Files
-
-Latest expanded draft:
-
-```text
-C:\Users\meng'bi\Desktop\毕业设计\毕业论文草稿_合成缺陷数据集生成系统_扩充到1w3_20260504.docx
-```
-
-The draft includes conclusion/outlook and is around 13k non-space characters.
-It still needs to reach the confirmed 15000+ requirement and needs formatting
-according to the school template.
-
-Relevant extracted school policy notes:
-
-- Computer/software-like work requires at least 10000, but the user confirmed
-  15000+ for this thesis.
-- Chinese abstract should be 400-600 words.
-- Keywords should be 3-5.
-- References should be 10+.
-- Foreign references should be 2+.
-- Opening report is 2500+ for engineering/science.
-- Foreign translation is 5000 Chinese characters or 20000 printed symbols.
+Use it as technical demo evidence only. It is isolated from production
+generation.
 
 ## Immediate Next Actions
 
@@ -192,7 +168,6 @@ Relevant extracted school policy notes:
 3. Run one dry-run and one tiny real render through the UI.
 4. Confirm `rgb` and `masks` preview load.
 5. Continue dataset generation from accepted combinations only.
-6. Continue expanding the thesis draft from 13k toward 15k+.
 
 ## Do Not Do
 

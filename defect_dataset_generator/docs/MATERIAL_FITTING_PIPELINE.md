@@ -117,7 +117,7 @@ pillow_baseline
 Score profiles:
 
 - `baseline`: legacy generic image similarity with brightness, color histogram, SSIM, and edge/texture.
-- `plastic_material`: thesis-reportable visual material calibration score focused on ROI brightness, color tone, local contrast, highlight behavior, texture, and low-weight SSIM.
+- `plastic_material`: technical-report-friendly visual material calibration score focused on ROI brightness, color tone, local contrast, highlight behavior, texture, and low-weight SSIM.
 
 Mask ROI:
 
