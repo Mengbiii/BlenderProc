@@ -4,7 +4,8 @@ Last updated: 2026-05-04
 
 This guide is the current practical usage document for the BlenderProc-based
 plastic-part defect dataset generator. It is written for the next operator or
-Codex session that needs to verify the project and continue generation work.
+maintenance session that needs to verify the project and continue generation
+work.
 
 ## Project Root
 

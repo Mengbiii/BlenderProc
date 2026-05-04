@@ -1,8 +1,8 @@
-# Next Codex Handoff
+# Next Handoff
 
 Last updated: 2026-05-04
 
-This is the latest short handoff for the next Codex. Use it together with:
+This is the latest short handoff for the next maintainer. Use it together with:
 
 ```text
 defect_dataset_generator\docs\SYSTEM_USAGE_GUIDE.md

@@ -2,7 +2,7 @@
 
 Last updated: 2026-05-04
 
-This handoff is for the next Codex session. The current project is a
+This handoff is for the next maintenance session. The current project is a
 BlenderProc-based synthetic defect dataset generator for plastic workpieces.
 The immediate goal is now to continue safe 3k-5k dataset construction using
 only user-accepted combinations, while preserving manual RGB/mask inspection as
@@ -12,7 +12,7 @@ For the newest usage-oriented handoff, also read:
 
 ```text
 defect_dataset_generator/docs/SYSTEM_USAGE_GUIDE.md
-defect_dataset_generator/docs/NEXT_CODEX_HANDOFF_2026_05_04.md
+defect_dataset_generator/docs/NEXT_HANDOFF_2026_05_04.md
 ```
 
 ## Current Priority
@@ -70,7 +70,7 @@ Production generation handoff docs:
 defect_dataset_generator/docs/BLACK_DOT_SINGLE_DEFECT_3K_5K_HANDOFF.md
 defect_dataset_generator/docs/APPROVED_NON_BLACK_DEFECT_3K_FILLER_HANDOFF.md
 defect_dataset_generator/docs/SYSTEM_USAGE_GUIDE.md
-defect_dataset_generator/docs/NEXT_CODEX_HANDOFF_2026_05_04.md
+defect_dataset_generator/docs/NEXT_HANDOFF_2026_05_04.md
 ```
 
 Primary commands:

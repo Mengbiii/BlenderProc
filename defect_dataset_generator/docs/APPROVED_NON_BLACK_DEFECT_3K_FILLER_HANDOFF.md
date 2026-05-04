@@ -2,7 +2,7 @@
 
 Last updated: 2026-05-04
 
-This handoff is for the next Codex session. Scope is the approved non-black-dot defect portion of the final 3k-5k synthetic dataset, plus the approved same-scene non-black cooccurrence blocks.
+This handoff is for the next maintenance session. Scope is the approved non-black-dot defect portion of the final 3k-5k synthetic dataset, plus the approved same-scene non-black cooccurrence blocks.
 
 This document is a companion to:
 

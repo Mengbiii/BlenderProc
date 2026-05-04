@@ -2,7 +2,7 @@
 
 Last updated: 2026-05-04
 
-This handoff is for the next Codex session. Scope is **single-defect black-dot generation only**. Do not include any same-scene multi-defect/cooccurrence combinations in this pass.
+This handoff is for the next maintenance session. Scope is **single-defect black-dot generation only**. Do not include any same-scene multi-defect/cooccurrence combinations in this pass.
 
 ## Goal
 
@@ -42,7 +42,7 @@ Use the row matching the final dataset size requested by the user. If the final 
 
 ## Actual Generation Flow By Combination
 
-The high-level command is `defect_dataset_generator\app.py generate-target`, but the next Codex must verify the actual backend command in each `generation_plan.json`. For reference-backed black dots, `app.py` resolves the backend in:
+The high-level command is `defect_dataset_generator\app.py generate-target`, but the next maintainer must verify the actual backend command in each `generation_plan.json`. For reference-backed black dots, `app.py` resolves the backend in:
 
 ```text
 E:\BlenderProject\BlenderProc\defect_dataset_generator\app.py
