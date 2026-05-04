@@ -13,6 +13,10 @@ from core.file_manager import (
 )
 from core.defect_scheduler import check_seed_reproducibility, make_plans, write_defect_plans, zones_are_valid
 from core.defect_presets import apply_black_dot_preset_to_config, load_defect_preset
+from core.defect_parameter_overrides import (
+    apply_blackdot_parameter_overrides,
+    load_defect_parameter_overrides,
+)
 from core.material_fitter import fit_material
 from core.metadata_writer import write_dataset_summary, write_json
 from core.model_color_profiles import get_model_color_profile, list_model_color_profiles
@@ -224,6 +228,12 @@ def cmd_generate_target(args: argparse.Namespace) -> int:
                 target_profile.get("supported_defects", []),
             )
         )
+    defect_parameter_overrides = load_defect_parameter_overrides(
+        args.defect_params_json,
+        args.target,
+        requested_defects,
+        "single",
+    )
     out_dir = ensure_output_dir(resolve_cli_path(args.out))
     plans = []
     for index, defect_type in enumerate(requested_defects):
@@ -241,6 +251,7 @@ def cmd_generate_target(args: argparse.Namespace) -> int:
             object_transform_camera_side=args.object_transform_camera_side,
             object_rotate_deg=args.object_rotate_deg,
             object_translate=args.object_translate,
+            defect_parameter_overrides=defect_parameter_overrides.get(defect_type, {}),
             dry_run=args.dry_run,
         )
         plans.append(plan)
@@ -251,6 +262,7 @@ def cmd_generate_target(args: argparse.Namespace) -> int:
         "target": args.target,
         "target_profile": target_profile,
         "requested_defects": requested_defects,
+        "defect_parameter_overrides": defect_parameter_overrides,
         "count_per_defect": args.count,
         "output_dir": str(out_dir),
         "quality_goal": "coverage_first_not_visual_realism",
@@ -275,6 +287,12 @@ def cmd_generate_target_cooccurrence(args: argparse.Namespace) -> int:
                 target_profile.get("supported_defects", []),
             )
         )
+    defect_parameter_overrides = load_defect_parameter_overrides(
+        args.defect_params_json,
+        args.target,
+        requested_defects,
+        "cooccurrence",
+    )
     backend_equivalence = _cooccurrence_backend_equivalence(target_profile, requested_defects)
     if not backend_equivalence["uses_same_single_defect_logic"] and not args.allow_generic_fallback:
         raise ValueError(
@@ -300,6 +318,7 @@ def cmd_generate_target_cooccurrence(args: argparse.Namespace) -> int:
             object_transform_camera_side=args.object_transform_camera_side,
             object_rotate_deg=args.object_rotate_deg,
             object_translate=args.object_translate,
+            defect_parameter_overrides=defect_parameter_overrides,
             dry_run=args.dry_run,
         )
     else:
@@ -317,6 +336,7 @@ def cmd_generate_target_cooccurrence(args: argparse.Namespace) -> int:
             object_transform_camera_side=args.object_transform_camera_side,
             object_rotate_deg=args.object_rotate_deg,
             object_translate=args.object_translate,
+            defect_parameter_overrides=defect_parameter_overrides,
             render_class_masks=args.render_class_masks,
             dry_run=args.dry_run,
         )
@@ -327,6 +347,7 @@ def cmd_generate_target_cooccurrence(args: argparse.Namespace) -> int:
         "target": args.target,
         "target_profile": target_profile,
         "requested_defects": requested_defects,
+        "defect_parameter_overrides": defect_parameter_overrides,
         "backend_equivalence": backend_equivalence,
         "count": args.count,
         "output_dir": str(out_dir),
@@ -431,6 +452,7 @@ def _run_target_defect_backend(
     object_transform_camera_side,
     object_rotate_deg,
     object_translate,
+    defect_parameter_overrides,
     dry_run,
 ):
     target_id = target_profile["target_id"]
@@ -443,7 +465,10 @@ def _run_target_defect_backend(
                 python_executable=Path(sys.executable),
                 blend_path=resolve_cli_path(target_profile["blend_path"]),
                 material={},
-                defect_config=_blackdot_defect_config(target_id),
+                defect_config=apply_blackdot_parameter_overrides(
+                    _blackdot_defect_config(target_id),
+                    defect_parameter_overrides,
+                ),
                 count=count,
                 output_dir=output_dir,
                 material_path=None,
@@ -473,6 +498,7 @@ def _run_target_defect_backend(
             object_transform_camera_side=object_transform_camera_side,
             object_rotate_deg=object_rotate_deg,
             object_translate=object_translate,
+            defect_parameter_overrides=defect_parameter_overrides,
             dry_run=dry_run,
         )
     if backend_name == "qc71336_white_foreign_reference":
@@ -489,6 +515,7 @@ def _run_target_defect_backend(
             object_transform_camera_side=object_transform_camera_side,
             object_rotate_deg=object_rotate_deg,
             object_translate=object_translate,
+            defect_parameter_overrides=defect_parameter_overrides,
             dry_run=dry_run,
         )
     if backend_name == "qc75244_mixed_color_reference":
@@ -521,6 +548,7 @@ def _run_target_defect_backend(
         object_transform_camera_side=object_transform_camera_side,
         object_rotate_deg=object_rotate_deg,
         object_translate=object_translate,
+        defect_parameter_overrides=defect_parameter_overrides,
         dry_run=dry_run,
     )
 
@@ -761,6 +789,11 @@ def build_parser() -> argparse.ArgumentParser:
     target_generate_parser.add_argument("--seed", type=int, default=100, help="Base seed for generation.")
     target_generate_parser.add_argument("--dry-run", action="store_true", help="Write plans without running BlenderProc.")
     target_generate_parser.add_argument(
+        "--defect-params-json",
+        default=None,
+        help="Optional UI-authored JSON with validated defect parameter overrides.",
+    )
+    target_generate_parser.add_argument(
         "--anchor-sides",
         nargs="+",
         choices=["front", "back", "side"],
@@ -812,6 +845,11 @@ def build_parser() -> argparse.ArgumentParser:
     target_cooccurrence_parser.add_argument("--samples", type=int, default=32, help="Cycles samples for renders.")
     target_cooccurrence_parser.add_argument("--seed", type=int, default=100, help="Base seed for generation.")
     target_cooccurrence_parser.add_argument("--dry-run", action="store_true", help="Write plans without running BlenderProc.")
+    target_cooccurrence_parser.add_argument(
+        "--defect-params-json",
+        default=None,
+        help="Optional UI-authored JSON with validated per-defect parameter overrides.",
+    )
     target_cooccurrence_parser.add_argument(
         "--allow-generic-fallback",
         action="store_true",

@@ -53,6 +53,14 @@ Current UI behavior:
 - `Single` mode uses a single-choice defect selector.
 - `Cooccurrence` mode only offers manually accepted combinations.
 - `Normal` mode creates no-defect samples.
+- The defect parameter panel adapts to the selected target and defect.
+- Editable defect parameters are loaded from the current preset/profile files.
+- UI parameter edits are limited to whitelisted numeric fields such as size
+  range, size scale, width/height multiplier, roughness, or supported reference
+  backend radius/depth scales.
+- The UI does not allow changing defect generation scripts, backend type,
+  placement logic, or arbitrary command text.
+- The backend validates the UI parameter JSON again before rendering.
 - Preview supports `rgb` and `masks` only. Overlay is not exposed in the UI.
 - `Dry run` is enabled by default.
 - `Dry run` writes plans and commands only. It does not run Blender and does not
@@ -78,6 +86,12 @@ Single defect:
 D:\Anaconda\envs\defect_eval\python.exe defect_dataset_generator\app.py generate-target --target <target> --defects <defect> --count <count> --out <output_dir> --samples <samples> --seed <seed> --anchor-sides <front|back|side>
 ```
 
+Optional UI-style parameter override:
+
+```powershell
+D:\Anaconda\envs\defect_eval\python.exe defect_dataset_generator\app.py generate-target --target qc7_5244_black --defects foreign_material --count 1 --out <output_dir> --samples 16 --seed 90001 --anchor-sides front --defect-params-json <output_dir>\ui_defect_params.json
+```
+
 Same-scene approved cooccurrence:
 
 ```powershell
@@ -91,6 +105,29 @@ D:\Anaconda\envs\defect_eval\python.exe defect_dataset_generator\app.py generate
 ```
 
 Add `--dry-run` to any command when only the generation plan should be checked.
+
+Parameter override JSON format:
+
+```json
+{
+  "schema_version": "ui_defect_params_v1",
+  "target": "qc7_5244_black",
+  "mode": "single",
+  "defects": {
+    "foreign_material": {
+      "size_factor_min": 0.0014,
+      "size_factor_max": 0.0028,
+      "size_scale": 1.0,
+      "width_multiplier": 1.3,
+      "height_multiplier": 1.1,
+      "roughness": 0.72
+    }
+  }
+}
+```
+
+The accepted keys depend on the selected backend. Invalid keys or values are
+rejected before BlenderProc starts.
 
 ## Active Configuration Files
 
@@ -112,6 +149,7 @@ Important renderer/app files:
 
 ```text
 defect_dataset_generator\app.py
+defect_dataset_generator\core\defect_parameter_overrides.py
 defect_dataset_generator\core\renderer.py
 defect_dataset_generator\blender_scripts\render_generic_main_plane_defects.py
 defect_dataset_generator\blender_scripts\render_persistent_generic_batch.py

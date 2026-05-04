@@ -30,6 +30,8 @@ REPO_ROOT = SCRIPT_DIR.parents[1]
 APP_PATH = REPO_ROOT / "defect_dataset_generator" / "app.py"
 PROFILE_PATH = REPO_ROOT / "defect_dataset_generator" / "config" / "model_color_profiles.json"
 TARGETS_PATH = REPO_ROOT / "defect_dataset_generator" / "config" / "model_color_defect_targets.json"
+GENERATION_DEFAULTS_PATH = REPO_ROOT / "defect_dataset_generator" / "config" / "generation_defaults_registry.json"
+BLACK_DOT_PRESETS_PATH = REPO_ROOT / "defect_dataset_generator" / "config" / "black_dot_appearance_presets.json"
 DEFAULT_PYTHON = Path(r"D:\Anaconda\envs\defect_eval\python.exe")
 
 APPROVED_COOCCURRENCE = {
@@ -52,6 +54,11 @@ TEXT = {
         "cooccurrence": "Cooccurrence",
         "normal": "Normal",
         "defects": "Defects",
+        "defect_params": "Defect Parameters",
+        "use_custom_params": "Use custom parameters",
+        "reset_params": "Reset to defaults",
+        "no_params": "No editable parameters for this backend.",
+        "normal_params": "Normal generation has no defect parameters.",
         "co_combo": "Approved cooccurrence combo",
         "no_combo": "No approved cooccurrence combo for this target",
         "side": "Side",
@@ -91,6 +98,11 @@ TEXT = {
         "cooccurrence": "同场景多缺陷",
         "normal": "正常样本",
         "defects": "缺陷",
+        "defect_params": "缺陷参数",
+        "use_custom_params": "使用自定义参数",
+        "reset_params": "恢复默认值",
+        "no_params": "当前后端没有可编辑参数。",
+        "normal_params": "正常样本不需要缺陷参数。",
         "co_combo": "已确认可用的同场景组合",
         "no_combo": "该目标当前没有已确认的同场景组合",
         "side": "生成面",
@@ -128,6 +140,8 @@ class DefectGenerationUI:
 
         self.profiles = self.load_profiles()
         self.targets = self.load_targets()
+        self.generation_defaults = self.load_json_file(GENERATION_DEFAULTS_PATH)
+        self.black_dot_presets = self.load_json_file(BLACK_DOT_PRESETS_PATH)
         self.process = None
         self.log_queue = queue.Queue()
         self.preview_files = []
@@ -150,6 +164,12 @@ class DefectGenerationUI:
             return {}
         with TARGETS_PATH.open("r", encoding="utf-8") as handle:
             return json.load(handle).get("targets", {})
+
+    def load_json_file(self, path):
+        if not path.exists():
+            return {}
+        with path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
 
     def build_variables(self):
         targets = sorted(self.profiles)
@@ -174,6 +194,9 @@ class DefectGenerationUI:
         self.defect_vars = {}
         self.selected_defect_var = tk.StringVar(value="")
         self.cooccurrence_var = tk.StringVar(value="")
+        self.use_custom_params_var = tk.BooleanVar(value=False)
+        self.param_vars = {}
+        self.current_param_specs = {}
 
     def lang_key(self):
         if not hasattr(self, "lang_var"):
@@ -250,14 +273,17 @@ class DefectGenerationUI:
         self.defects_frame = ttk.Frame(parent)
         self.defects_frame.grid(row=8, column=0, sticky="ew", pady=(2, 8))
 
+        self.params_frame = ttk.LabelFrame(parent, text=self.tr("defect_params"), padding=8)
+        self.params_frame.grid(row=9, column=0, sticky="ew", pady=(0, 8))
+
         self.side_label = ttk.Label(parent, text=self.tr("side"))
-        self.side_label.grid(row=9, column=0, sticky="w")
+        self.side_label.grid(row=10, column=0, sticky="w")
         self.side_combo = ttk.Combobox(parent, textvariable=self.side_var, values=["front"], state="readonly", width=34)
-        self.side_combo.grid(row=10, column=0, sticky="ew", pady=(2, 8))
+        self.side_combo.grid(row=11, column=0, sticky="ew", pady=(2, 8))
         self.side_combo.bind("<<ComboboxSelected>>", lambda _event: self.on_generation_option_changed())
 
         numeric = ttk.Frame(parent)
-        numeric.grid(row=11, column=0, sticky="ew", pady=(2, 8))
+        numeric.grid(row=12, column=0, sticky="ew", pady=(2, 8))
         for col in range(3):
             numeric.columnconfigure(col, weight=1)
         self.spinbox_labels = {}
@@ -266,9 +292,9 @@ class DefectGenerationUI:
         self.add_spinbox(numeric, "seed", self.seed_var, 0, 9999999, 2)
 
         self.output_label = ttk.Label(parent, text=self.tr("output"))
-        self.output_label.grid(row=12, column=0, sticky="w")
+        self.output_label.grid(row=13, column=0, sticky="w")
         out_row = ttk.Frame(parent)
-        out_row.grid(row=13, column=0, sticky="ew", pady=(2, 8))
+        out_row.grid(row=14, column=0, sticky="ew", pady=(2, 8))
         out_row.columnconfigure(0, weight=1)
         self.output_entry = ttk.Entry(out_row, textvariable=self.output_var, width=36)
         self.output_entry.grid(row=0, column=0, sticky="ew")
@@ -277,14 +303,14 @@ class DefectGenerationUI:
         self.output_browse_button.grid(row=0, column=1, padx=(6, 0))
 
         self.dry_run_check = ttk.Checkbutton(parent, text=self.tr("dry_run"), variable=self.dry_run_var, command=self.on_generation_option_changed)
-        self.dry_run_check.grid(row=14, column=0, sticky="w")
+        self.dry_run_check.grid(row=15, column=0, sticky="w")
         self.dry_run_help = ttk.Label(parent, text=self.tr("dry_run_help"), wraplength=360, foreground="#555555")
-        self.dry_run_help.grid(row=15, column=0, sticky="w", pady=(0, 6))
+        self.dry_run_help.grid(row=16, column=0, sticky="w", pady=(0, 6))
         self.large_check = ttk.Checkbutton(parent, text=self.tr("large"), variable=self.allow_large_var)
-        self.large_check.grid(row=16, column=0, sticky="w")
+        self.large_check.grid(row=17, column=0, sticky="w")
 
         buttons = ttk.Frame(parent)
-        buttons.grid(row=17, column=0, sticky="ew", pady=(14, 0))
+        buttons.grid(row=18, column=0, sticky="ew", pady=(14, 0))
         self.refresh_button = ttk.Button(buttons, text=self.tr("refresh"), command=self.refresh_command_preview)
         self.refresh_button.grid(row=0, column=0, padx=(0, 5), pady=3)
         self.run_button = ttk.Button(buttons, text=self.tr("run"), command=self.run_command)
@@ -293,7 +319,7 @@ class DefectGenerationUI:
         self.stop_button.grid(row=0, column=2, padx=5, pady=3)
 
         self.target_info = tk.Text(parent, width=42, height=11, wrap="word")
-        self.target_info.grid(row=18, column=0, sticky="ew", pady=(12, 0))
+        self.target_info.grid(row=19, column=0, sticky="ew", pady=(12, 0))
         self.target_info.configure(state="disabled")
 
     def add_spinbox(self, parent, label, variable, start, end, column):
@@ -405,6 +431,10 @@ class DefectGenerationUI:
         self.update_auto_output_path()
         self.refresh_command_preview()
 
+    def on_defect_selection_changed(self):
+        self.update_auto_output_path()
+        self.refresh_parameter_panel()
+
     def approved_cooccurrence_labels(self, target):
         return ["+".join(combo) for combo in APPROVED_COOCCURRENCE.get(target, [])]
 
@@ -422,6 +452,7 @@ class DefectGenerationUI:
         for key, button in self.mode_buttons.items():
             button.configure(text=self.tr(key))
         self.defects_label.configure(text=self.tr("defects"))
+        self.params_frame.configure(text=self.tr("defect_params"))
         self.side_label.configure(text=self.tr("side"))
         for key, label in self.spinbox_labels.items():
             label.configure(text=self.tr(key))
@@ -472,7 +503,7 @@ class DefectGenerationUI:
                 width=34,
             )
             self.cooccurrence_combo.pack(anchor="w", fill="x", pady=(2, 4))
-            self.cooccurrence_combo.bind("<<ComboboxSelected>>", lambda _event: self.on_generation_option_changed())
+            self.cooccurrence_combo.bind("<<ComboboxSelected>>", lambda _event: self.on_defect_selection_changed())
             if combos:
                 if self.cooccurrence_var.get() not in combos:
                     self.cooccurrence_var.set(combos[0])
@@ -491,7 +522,7 @@ class DefectGenerationUI:
                     text=defect,
                     value=defect,
                     variable=self.selected_defect_var,
-                    command=self.on_generation_option_changed,
+                    command=self.on_defect_selection_changed,
                 ).pack(anchor="w")
         else:
             self.cooccurrence_var.set("")
@@ -515,6 +546,7 @@ class DefectGenerationUI:
             lines.append("")
             lines.append(f"status: {target_info.get('current_backend_status')}")
         self.write_text(self.target_info, "\n".join(lines))
+        self.refresh_parameter_panel(refresh=False)
         self.update_auto_output_path()
         self.refresh_command_preview()
 
@@ -526,6 +558,176 @@ class DefectGenerationUI:
             value = self.selected_defect_var.get()
             return [value] if value else []
         return []
+
+    def refresh_parameter_panel(self, refresh=True):
+        if not hasattr(self, "params_frame"):
+            return
+        for child in self.params_frame.winfo_children():
+            child.destroy()
+        self.param_vars = {}
+        self.current_param_specs = {}
+        mode = self.mode_var.get()
+        defects = self.selected_defects()
+        if mode == "normal":
+            self.use_custom_params_var.set(False)
+            ttk.Label(self.params_frame, text=self.tr("normal_params"), foreground="#777777", wraplength=340).pack(anchor="w")
+            if refresh:
+                self.refresh_command_preview()
+            return
+        ttk.Checkbutton(
+            self.params_frame,
+            text=self.tr("use_custom_params"),
+            variable=self.use_custom_params_var,
+            command=self.refresh_command_preview,
+        ).pack(anchor="w")
+        ttk.Button(self.params_frame, text=self.tr("reset_params"), command=self.reset_parameter_defaults).pack(anchor="w", pady=(4, 6))
+        if not defects:
+            ttk.Label(self.params_frame, text=self.tr("no_params"), foreground="#777777", wraplength=340).pack(anchor="w")
+            return
+        target = self.target_var.get()
+        editable_count = 0
+        for defect in defects:
+            specs = self.parameter_specs_for(target, defect)
+            self.current_param_specs[defect] = specs
+            ttk.Label(self.params_frame, text=defect).pack(anchor="w", pady=(4, 1))
+            if not specs:
+                ttk.Label(self.params_frame, text=self.tr("no_params"), foreground="#777777", wraplength=340).pack(anchor="w")
+                continue
+            editable_count += len(specs)
+            for spec in specs:
+                row = ttk.Frame(self.params_frame)
+                row.pack(fill="x", pady=1)
+                ttk.Label(row, text=spec["label"], width=24).pack(side="left")
+                var = tk.StringVar(value=self.format_float(spec["default"]))
+                self.param_vars[(defect, spec["key"])] = var
+                entry = ttk.Entry(row, textvariable=var, width=10)
+                entry.pack(side="left")
+                entry.bind("<KeyRelease>", lambda _event: self.refresh_command_preview())
+                ttk.Label(row, text=f"{spec['min']}..{spec['max']}", foreground="#777777").pack(side="left", padx=(6, 0))
+        if editable_count == 0:
+            self.use_custom_params_var.set(False)
+        if refresh:
+            self.refresh_command_preview()
+
+    def reset_parameter_defaults(self):
+        for defect, specs in self.current_param_specs.items():
+            for spec in specs:
+                var = self.param_vars.get((defect, spec["key"]))
+                if var is not None:
+                    var.set(self.format_float(spec["default"]))
+        self.refresh_command_preview()
+
+    def parameter_specs_for(self, target, defect):
+        if defect == "black_dot" and target in self.blackdot_reference_targets():
+            return self.blackdot_parameter_specs(target)
+        if target == "qc71336_white" and defect == "foreign_material":
+            return [
+                self.param_spec("foreign_material_radius_scale", "radius scale", 0.0, 0.0, 0.05),
+                self.param_spec("foreign_material_depth_scale", "depth scale", 0.0, 0.0, 0.2),
+            ]
+        if target == "qc71336_black" and defect in {"foreign_material", "splay"}:
+            return []
+        if target == "qc7_5244_white" and defect == "mixed_color_contamination":
+            return []
+        return self.generic_parameter_specs(defect)
+
+    def blackdot_reference_targets(self):
+        return {"p101040_blue", "qc71336_white", "qc71336_gray", "qc7_5244_white"}
+
+    def blackdot_parameter_specs(self, target):
+        preset_map = (
+            self.generation_defaults.get("black_dot_specialized_presets", {})
+            .get("default_by_target", {})
+        )
+        preset_name = preset_map.get(target)
+        params = (
+            self.black_dot_presets.get("presets", {})
+            .get(preset_name, {})
+            .get("backend_parameters", {})
+        )
+        return [
+            self.param_spec("black_dot_radius_min_scale", "radius min scale", params.get("black_dot_radius_min_scale", 0.001), 0.0001, 0.05),
+            self.param_spec("black_dot_radius_max_scale", "radius max scale", params.get("black_dot_radius_max_scale", 0.003), 0.0001, 0.05),
+            self.param_spec("black_dot_depth_min_scale", "depth min scale", params.get("black_dot_depth_min_scale", 0.002), 0.0001, 0.2),
+            self.param_spec("black_dot_depth_max_scale", "depth max scale", params.get("black_dot_depth_max_scale", 0.006), 0.0001, 0.2),
+        ]
+
+    def generic_parameter_specs(self, defect):
+        defaults = self.generation_defaults.get("defect_defaults", {}).get(defect, {})
+        size_range = defaults.get("size_factor_range", [0.012, 0.035])
+        specs = [
+            self.param_spec("size_factor_min", "size factor min", size_range[0], 0.0001, 0.2),
+            self.param_spec("size_factor_max", "size factor max", size_range[1], 0.0001, 0.2),
+            self.param_spec("size_scale", "size scale", defaults.get("size_scale", 1.0), 0.1, 5.0),
+        ]
+        if "width_multiplier" in defaults:
+            specs.append(self.param_spec("width_multiplier", "width multiplier", defaults["width_multiplier"], 0.05, 20.0))
+        if "height_multiplier" in defaults:
+            specs.append(self.param_spec("height_multiplier", "height multiplier", defaults["height_multiplier"], 0.05, 20.0))
+        material = defaults.get("material", {})
+        if "roughness" in material:
+            specs.append(self.param_spec("roughness", "roughness", material["roughness"], 0.0, 1.0))
+        return specs
+
+    def param_spec(self, key, label, default, min_value, max_value):
+        return {"key": key, "label": label, "default": float(default), "min": float(min_value), "max": float(max_value)}
+
+    def format_float(self, value):
+        return ("{0:.6f}".format(float(value))).rstrip("0").rstrip(".")
+
+    def collect_defect_params(self):
+        if self.mode_var.get() == "normal" or not self.use_custom_params_var.get():
+            return {}
+        defects_payload = {}
+        for defect, specs in self.current_param_specs.items():
+            values = {}
+            for spec in specs:
+                var = self.param_vars.get((defect, spec["key"]))
+                if var is None:
+                    continue
+                text = var.get().strip()
+                if not text:
+                    raise ValueError(f"{defect}.{spec['key']} cannot be empty.")
+                try:
+                    number = float(text)
+                except ValueError:
+                    raise ValueError(f"{defect}.{spec['key']} must be a number.") from None
+                if number < spec["min"] or number > spec["max"]:
+                    raise ValueError(f"{defect}.{spec['key']} must be between {spec['min']} and {spec['max']}.")
+                values[spec["key"]] = number
+            if values:
+                self.validate_parameter_pairs(defect, values)
+                defects_payload[defect] = values
+        if not defects_payload:
+            return {}
+        return {
+            "schema_version": "ui_defect_params_v1",
+            "target": self.target_var.get(),
+            "mode": self.mode_var.get(),
+            "defects": defects_payload,
+        }
+
+    def validate_parameter_pairs(self, defect, values):
+        pairs = [
+            ("size_factor_min", "size_factor_max"),
+            ("black_dot_radius_min_scale", "black_dot_radius_max_scale"),
+            ("black_dot_depth_min_scale", "black_dot_depth_max_scale"),
+        ]
+        for min_key, max_key in pairs:
+            if min_key in values and max_key in values and values[min_key] > values[max_key]:
+                raise ValueError(f"{defect}.{min_key} cannot be greater than {defect}.{max_key}.")
+
+    def defect_params_file_path(self):
+        return Path(self.output_var.get()) / "ui_defect_params.json"
+
+    def write_defect_params_file(self):
+        payload = self.collect_defect_params()
+        if not payload:
+            return None
+        path = self.defect_params_file_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        return path
 
     def build_command(self):
         mode = self.mode_var.get()
@@ -556,6 +758,9 @@ class DefectGenerationUI:
         ]
         if self.dry_run_var.get():
             command.append("--dry-run")
+        params_payload = self.collect_defect_params()
+        if params_payload:
+            command.extend(["--defect-params-json", str(self.defect_params_file_path())])
         return command
 
     def validate_command(self):
@@ -573,6 +778,7 @@ class DefectGenerationUI:
             raise ValueError("Python executable does not exist.")
         if not APP_PATH.exists():
             raise ValueError("app.py was not found.")
+        self.collect_defect_params()
 
     def refresh_command_preview(self):
         try:
@@ -587,18 +793,23 @@ class DefectGenerationUI:
         if self.process is not None and self.process.poll() is None:
             messagebox.showwarning("Run in progress", "A UI-started process is already running.")
             return
+        self.update_auto_output_path(new_stamp=True)
         try:
             self.validate_command()
         except Exception as exc:
             messagebox.showerror("Invalid command", str(exc))
             return
-        self.update_auto_output_path(new_stamp=True)
         output = Path(self.output_var.get())
         if output.exists() and any(output.iterdir()) and not self.dry_run_var.get():
             ok = messagebox.askyesno("Output exists", "The output folder is not empty. Continue?")
             if not ok:
                 return
         output.mkdir(parents=True, exist_ok=True)
+        try:
+            self.write_defect_params_file()
+        except Exception as exc:
+            messagebox.showerror("Invalid parameters", str(exc))
+            return
         command = self.build_command()
         self.refresh_command_preview()
         self.status_var.set("Running")

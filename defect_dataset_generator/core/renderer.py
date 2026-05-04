@@ -284,6 +284,7 @@ def run_generic_main_plane_backend(
     object_transform_camera_side="front",
     object_rotate_deg=None,
     object_translate=None,
+    defect_parameter_overrides=None,
     dry_run=False,
 ):
     if count < 1:
@@ -343,6 +344,9 @@ def run_generic_main_plane_backend(
     material_profile_path = _profile_path(project_root, (target_profile.get("material_source") or {}).get("path"))
     if material_profile_path:
         command.extend(["--material_profile", str(material_profile_path)])
+    defect_params_path = _write_defect_parameter_overrides(raw_output_dir, defect_parameter_overrides)
+    if defect_params_path:
+        command.extend(["--defect_params_json", str(defect_params_path)])
 
     log = {
         "backend_script": str(backend_script),
@@ -354,6 +358,7 @@ def run_generic_main_plane_backend(
         "object_transform_camera_side": object_transform_camera_side,
         "object_rotate_deg": object_rotate_deg,
         "object_translate": object_translate,
+        "defect_parameter_overrides": defect_parameter_overrides or {},
         "command": command,
         "dry_run": bool(dry_run),
         "failure_reason": None,
@@ -462,6 +467,7 @@ def run_generic_cooccurrence_backend(
     object_transform_camera_side="front",
     object_rotate_deg=None,
     object_translate=None,
+    defect_parameter_overrides=None,
     render_class_masks=False,
     dry_run=False,
 ):
@@ -530,6 +536,9 @@ def run_generic_cooccurrence_backend(
     material_profile_path = _profile_path(project_root, (target_profile.get("material_source") or {}).get("path"))
     if material_profile_path:
         command.extend(["--material_profile", str(material_profile_path)])
+    defect_params_path = _write_defect_parameter_overrides(output_dir, defect_parameter_overrides)
+    if defect_params_path:
+        command.extend(["--defect_params_json", str(defect_params_path)])
 
     planned_samples = []
     for index in range(count):
@@ -562,6 +571,7 @@ def run_generic_cooccurrence_backend(
         "object_transform_camera_side": object_transform_camera_side,
         "object_rotate_deg": object_rotate_deg,
         "object_translate": object_translate,
+        "defect_parameter_overrides": defect_parameter_overrides or {},
         "mask_output_policy": {
             "merged_mask": True,
             "class_masks": bool(render_class_masks),
@@ -1035,6 +1045,7 @@ def run_qc71336_black_reference_backend(
     object_transform_camera_side="front",
     object_rotate_deg=None,
     object_translate=None,
+    defect_parameter_overrides=None,
     dry_run=False,
 ):
     anchor_sides = anchor_sides or target_profile.get("default_anchor_sides") or ["front"]
@@ -1099,6 +1110,7 @@ def run_qc71336_white_foreign_reference_backend(
     object_transform_camera_side="front",
     object_rotate_deg=None,
     object_translate=None,
+    defect_parameter_overrides=None,
     dry_run=False,
 ):
     anchor_sides = anchor_sides or target_profile.get("default_anchor_sides") or ["front"]
@@ -1131,6 +1143,11 @@ def run_qc71336_white_foreign_reference_backend(
         "--anchor_sides",
     ]
     command.extend(anchor_sides)
+    if defect_parameter_overrides:
+        if "foreign_material_radius_scale" in defect_parameter_overrides:
+            command.extend(["--foreign_material_radius_scale", str(defect_parameter_overrides["foreign_material_radius_scale"])])
+        if "foreign_material_depth_scale" in defect_parameter_overrides:
+            command.extend(["--foreign_material_depth_scale", str(defect_parameter_overrides["foreign_material_depth_scale"])])
     _append_object_transform_args(command, object_transform_mode, object_transform_camera_side, object_rotate_deg, object_translate)
     return _run_reference_style_backend(
         backend_name="qc71336_white_foreign_reference",
@@ -1210,6 +1227,21 @@ def run_qc75244_mixed_color_reference_backend(
         anchor_sides=anchor_sides,
         dry_run=dry_run,
     )
+
+
+def _write_defect_parameter_overrides(output_dir, defect_parameter_overrides):
+    if not defect_parameter_overrides:
+        return None
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / "validated_defect_parameter_overrides.json"
+    write_json(
+        path,
+        {
+            "schema_version": "validated_defect_parameter_overrides_v1",
+            "defects": defect_parameter_overrides,
+        },
+    )
+    return path
 
 
 def _run_reference_style_backend(

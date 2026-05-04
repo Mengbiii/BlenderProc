@@ -64,6 +64,11 @@ def parse_args():
     )
     parser.add_argument("--material_profile", default=None)
     parser.add_argument(
+        "--defect_params_json",
+        default=None,
+        help="Validated per-defect parameter override JSON written by the UI/backend wrapper.",
+    )
+    parser.add_argument(
         "--object_transform_mode",
         choices=["none", "keep_camera"],
         default="none",
@@ -102,6 +107,7 @@ def parse_args():
 def main():
     args = parse_args()
     defaults = load_defaults()
+    defaults = apply_defect_parameter_overrides(defaults, args.defect_params_json)
     random.seed(args.seed)
     output_dir = Path(args.output).resolve()
     rgb_dir = mkdir(output_dir / "rgb")
@@ -532,6 +538,45 @@ def load_defaults():
         with DEFAULTS_PATH.open("r", encoding="utf-8") as f:
             return json.load(f)
     return {}
+
+
+def apply_defect_parameter_overrides(defaults, path_value):
+    if not path_value:
+        return defaults
+    path = Path(path_value).resolve()
+    with path.open("r", encoding="utf-8-sig") as f:
+        payload = json.load(f)
+    raw_defects = payload.get("defects", {})
+    if not isinstance(raw_defects, dict):
+        raise ValueError("--defect_params_json must contain a defects object.")
+    merged = json.loads(json.dumps(defaults))
+    defect_defaults = merged.setdefault("defect_defaults", {})
+    for defect_type, values in raw_defects.items():
+        if not isinstance(values, dict):
+            raise ValueError("Parameter overrides for {0} must be an object.".format(defect_type))
+        current = defect_defaults.setdefault(defect_type, {})
+        size_min = values.get("size_factor_min")
+        size_max = values.get("size_factor_max")
+        if size_min is not None or size_max is not None:
+            old_range = current.get("size_factor_range", [0.012, 0.035])
+            new_min = float(size_min if size_min is not None else old_range[0])
+            new_max = float(size_max if size_max is not None else old_range[1])
+            if new_min <= 0 or new_max <= 0 or new_min > new_max:
+                raise ValueError("Invalid size_factor range for {0}.".format(defect_type))
+            current["size_factor_range"] = [new_min, new_max]
+        for key in ("width_multiplier", "height_multiplier", "size_scale"):
+            if key in values:
+                number = float(values[key])
+                if number <= 0:
+                    raise ValueError("{0} for {1} must be positive.".format(key, defect_type))
+                current[key] = number
+        if "roughness" in values:
+            roughness = float(values["roughness"])
+            if roughness < 0.0 or roughness > 1.0:
+                raise ValueError("roughness for {0} must be between 0 and 1.".format(defect_type))
+            current.setdefault("material", {})["roughness"] = roughness
+        current["ui_parameter_override_applied"] = True
+    return merged
 
 
 def load_material_profile(path_value):
@@ -1268,6 +1313,7 @@ def create_defect(product, target, defect_type, rng, sides, defaults, allow_targ
     )
     size_range = defect_defaults.get("size_factor_range", [0.012, 0.035])
     radius = max_dim * rng.uniform(float(size_range[0]), float(size_range[1]))
+    size_scale = float(defect_defaults.get("size_scale", 1.0))
     if is_qc71336_gray_target(target) and defect_type == "black_dot":
         radius = max_dim * rng.uniform(0.0020, 0.0038)
     if is_qc7_5244_black_target(target):
@@ -1277,11 +1323,15 @@ def create_defect(product, target, defect_type, rng, sides, defaults, allow_targ
             radius = max_dim * rng.uniform(0.0014, 0.0028)
         elif defect_type == "splay":
             radius = max_dim * rng.uniform(0.0040, 0.0068)
+    radius *= size_scale
+    shape_uses_radius = True
     if defect_type == "splay":
         if is_ql3_target(target):
             obj = add_ql3_splay_defect("GENERIC_DEFECT_SPLAY", max_dim, rng)
+            shape_uses_radius = False
         elif is_qc7_5244_black_target(target):
             obj = add_qc7_black_splay_defect("GENERIC_DEFECT_SPLAY", max_dim, rng)
+            shape_uses_radius = False
         else:
             obj = add_splay_streak_defect(
                 "GENERIC_DEFECT_SPLAY",
@@ -1292,6 +1342,7 @@ def create_defect(product, target, defect_type, rng, sides, defaults, allow_targ
     elif defect_type == "mixed_color_contamination":
         if is_qc71336_gray_target(target):
             obj = add_qc71336_gray_soft_spiral_mixed_color_defect("GENERIC_DEFECT_MIXED_COLOR", max_dim, rng)
+            shape_uses_radius = False
         else:
             obj = add_plane_defect(
                 "GENERIC_DEFECT_MIXED_COLOR",
@@ -1301,10 +1352,13 @@ def create_defect(product, target, defect_type, rng, sides, defaults, allow_targ
     elif defect_type == "foreign_material":
         if is_ql3_target(target):
             obj = add_ql3_foreign_chip_defect("GENERIC_DEFECT_FOREIGN", max_dim, rng, side)
+            shape_uses_radius = False
         elif is_qc71336_white_target(target):
             obj = add_qc71336_white_foreign_particle_defect("GENERIC_DEFECT_FOREIGN", max_dim, rng)
+            shape_uses_radius = False
         elif is_qc7_5244_black_target(target):
             obj = add_qc7_black_foreign_particles("GENERIC_DEFECT_FOREIGN", max_dim, rng)
+            shape_uses_radius = False
         else:
             obj = add_irregular_chip_defect(
                 "GENERIC_DEFECT_FOREIGN",
@@ -1323,6 +1377,8 @@ def create_defect(product, target, defect_type, rng, sides, defaults, allow_targ
             obj = add_qc7_black_dot_smudge("GENERIC_DEFECT_BLACK_DOT", radius, rng)
         else:
             obj = add_disk_defect("GENERIC_DEFECT_BLACK_DOT", radius)
+    if not shape_uses_radius and size_scale != 1.0:
+        scale_defect_object(obj, size_scale)
     obj.location = Vector(coords)
     align_plane_to_normal(obj, axis_unit(normal_axis, sign))
     if is_qc7_5244_black_target(target) and defect_type == "splay":
@@ -2146,6 +2202,11 @@ def defect_mesh_objects(defect):
     if defect.type == "MESH":
         return [defect]
     return [obj for obj in bpy.data.objects if obj.type == "MESH" and obj.parent == defect]
+
+
+def scale_defect_object(defect, scale_factor):
+    for mesh_obj in defect_mesh_objects(defect):
+        mesh_obj.scale = (mesh_obj.scale.x * scale_factor, mesh_obj.scale.y * scale_factor, mesh_obj.scale.z * scale_factor)
 
 
 def render_rgb(path):
