@@ -1,6 +1,6 @@
 # Current Project Handoff
 
-Last updated: 2026-05-04
+Last updated: 2026-05-05
 
 This handoff is for the next maintenance session. The current project is a
 BlenderProc-based synthetic defect dataset generator for plastic workpieces.
@@ -14,6 +14,39 @@ For the newest usage-oriented handoff, also read:
 defect_dataset_generator/docs/SYSTEM_USAGE_GUIDE.md
 defect_dataset_generator/docs/NEXT_HANDOFF_2026_05_04.md
 ```
+
+## 2026-05-05 Normal Dataset Update
+
+The final 3k-5k dataset assembly was corrected after the earlier normal images
+were found to be too regular and visually inconsistent with accepted defect
+images. The old normal rows were removed from the final dataset manifest and
+quarantined, then a new 700-image normal set was generated and appended.
+
+Current final dataset state:
+
+- Final dataset root: `defect_dataset_generator/outputs/dataset/final_3k_5k_dataset_20260504`
+- Final manifest row count: `3472`
+- Defect rows: `2772`
+- Normal rows: `700`
+- Normal target/side allocation: `7` targets x `2` sides x `50` images
+- Regenerated normal source root: `defect_dataset_generator/outputs/dataset/production_normal_flip_20260505`
+- Visual check sheet: `normal_regenerated_front_back_contact_sheet_20260505.jpg`
+
+Normal rendering policy now follows the accepted tabletop style:
+
+- P101040 normal images use the same reference black-dot scene path as
+  `p101040_blue black_dot`, but with defect creation disabled.
+- Other normal images use the generic main-plane path with a neutral tabletop
+  background, constrained tabletop camera sampling, and domain randomization.
+- Back-side normal images are produced by flipping the product object while
+  keeping the camera/background style front-facing, not by orbiting the camera
+  behind the object.
+- QL3 normal material is forced back to a dark rough plastic appearance and
+  should not render as a shiny silver surface.
+- Normal labels are intentionally empty and normal masks are fully black.
+
+Do not commit generated dataset files from `defect_dataset_generator/outputs/`.
+They are ignored by Git and should remain artifact/output data.
 
 ## Current Priority
 

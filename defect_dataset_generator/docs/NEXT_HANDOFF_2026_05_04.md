@@ -1,6 +1,6 @@
 # Next Handoff
 
-Last updated: 2026-05-04
+Last updated: 2026-05-05
 
 This is the latest short handoff for the next maintainer. Use it together with:
 
@@ -21,6 +21,8 @@ plastic workpieces. The next work is to verify the updated docs, continue safe
 ## Current Important User Decisions
 
 - Final dataset target is 3k-5k images.
+- The current assembled dataset contains `3472` rows: `2772` defect rows and
+  `700` regenerated normal rows.
 - Model files should not be pushed to GitHub. The user will provide models by
   network disk.
 - Black-dot-containing cooccurrence is not in the current generation plan.
@@ -115,6 +117,7 @@ No other cooccurrence should be run without new user approval.
 | Scope | Backend/script |
 | --- | --- |
 | Reference black-dot | `examples/my_project/reference_blend_blackdot_multi_model.py` |
+| P101040 normal | `examples/my_project/reference_blend_blackdot_multi_model.py` with normal mode enabled |
 | QC71336 black foreign/splay/cooccurrence | `examples/my_project/reference_blend_qc71336_black_prebuilt_normal_debug.py` |
 | QC71336 white foreign material | `examples/my_project/reference_blend_qc71336_white_prebuilt_normal_debug.py` |
 | QC75244/QC7-5244 white mixed color | `examples/my_project/reference_blend_qc75244_mixed_color_profile_debug.py` |
@@ -143,6 +146,32 @@ Recommended workflow for each block:
 6. Run production count with GPU rendering.
 7. Spot-check outputs again.
 
+## Normal Dataset State
+
+The previous normal images in the final 3k-5k dataset were removed because they
+were too regular and did not preserve the accepted tabletop/background style.
+They were quarantined under the final dataset root, then regenerated.
+
+Current normal policy:
+
+- Use `generate-target-normal` only.
+- Keep normal labels empty and masks all black.
+- Use the same tabletop background style as the accepted P101040 black-dot
+  reference output.
+- For back-side normal images, flip the product object by 180 degrees while
+  keeping the camera/background style front-facing.
+- Keep domain randomization active for lighting, camera jitter, and neutral
+  background variation.
+- Avoid extreme orbit angles; the image should look like the product was placed
+  on a table and photographed.
+
+Reference output roots:
+
+```text
+defect_dataset_generator\outputs\dataset\production_normal_flip_20260505
+defect_dataset_generator\outputs\dataset\final_3k_5k_dataset_20260504
+```
+
 ## P101040 Rotation Sampling Case
 
 Files:
@@ -163,6 +192,11 @@ generation.
 
 ## Immediate Next Actions
 
+For push preparation, first review the pending code/documentation diff, commit
+only source and documentation changes, and keep generated dataset outputs out of
+Git. After pushing, keep the assembled dataset output as a local artifact unless
+a separate artifact storage path is requested.
+
 1. Verify the updated docs against the current code.
 2. Confirm the UI still opens from `打开缺陷生成UI.bat`.
 3. Run one dry-run and one tiny real render through the UI.
@@ -172,6 +206,8 @@ generation.
 ## Do Not Do
 
 - Do not push model files.
+- Do not push generated dataset images, masks, labels, metadata, or local
+  render logs.
 - Do not delete user output folders.
 - Do not re-enable arbitrary cooccurrence in the UI.
 - Do not use `overlay` as a required UI preview output.

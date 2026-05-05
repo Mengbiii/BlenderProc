@@ -697,6 +697,22 @@ def run_generic_normal_backend(
     if count < 1:
         raise ValueError("--count must be >= 1")
     anchor_sides = anchor_sides or target_profile.get("default_anchor_sides") or ["front"]
+    if str(target_profile.get("target_id", "")).lower() == "p101040_blue":
+        return run_reference_blackdot_normal_backend(
+            project_root=project_root,
+            python_executable=python_executable,
+            target_profile=target_profile,
+            count=count,
+            output_dir=output_dir,
+            samples=samples,
+            seed=seed,
+            anchor_sides=anchor_sides,
+            object_transform_mode=object_transform_mode,
+            object_transform_camera_side=object_transform_camera_side,
+            object_rotate_deg=object_rotate_deg,
+            object_translate=object_translate,
+            dry_run=dry_run,
+        )
     backend_script = project_root / "defect_dataset_generator" / "blender_scripts" / "render_generic_main_plane_defects.py"
     blenderproc_cli = project_root / "cli.py"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -844,6 +860,148 @@ def run_generic_normal_backend(
         anchor_sides=anchor_sides,
         samples_requested=samples,
     )
+    write_json(output_dir / "generation_plan.json", plan)
+    write_dataset_summary(output_dir / "dataset_summary.json", plan)
+    return plan
+
+
+def run_reference_blackdot_normal_backend(
+    project_root,
+    python_executable,
+    target_profile,
+    count,
+    output_dir,
+    samples=32,
+    seed=100,
+    anchor_sides=None,
+    object_transform_mode="none",
+    object_transform_camera_side="front",
+    object_rotate_deg=None,
+    object_translate=None,
+    dry_run=False,
+):
+    anchor_sides = anchor_sides or ["front"]
+    anchor_side = anchor_sides[0]
+    if anchor_side == "back" and object_transform_mode == "none":
+        object_transform_mode = "keep_camera"
+        object_transform_camera_side = "front"
+    backend_script = project_root / "examples" / "my_project" / "reference_blend_blackdot_multi_model.py"
+    blenderproc_cli = project_root / "cli.py"
+    raw_output_dir = output_dir / "_backend" / "reference_blackdot_normal"
+    raw_output_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_framework_output_dirs(output_dir)
+    blend_path = _profile_path(project_root, target_profile.get("blend_path"))
+    command = _build_reference_blackdot_command(
+        python_executable=python_executable,
+        blenderproc_cli=blenderproc_cli,
+        backend_script=backend_script,
+        backend_model="P101040_blue",
+        raw_output_dir=raw_output_dir,
+        count=count,
+        samples=samples,
+        seed=seed,
+        anchor_side=anchor_side,
+        blend_path=blend_path,
+        defect_config={},
+        object_transform_mode=object_transform_mode,
+        object_transform_camera_side=object_transform_camera_side,
+        object_rotate_deg=object_rotate_deg,
+        object_translate=object_translate,
+        normal_mode=True,
+    )
+    log = {
+        "backend_script": str(backend_script),
+        "output_folder": str(raw_output_dir),
+        "framework_output_folder": str(output_dir),
+        "generation_mode": "normal",
+        "command": command,
+        "dry_run": bool(dry_run),
+        "failure_reason": None,
+    }
+    if dry_run:
+        plan = _build_generic_normal_plan(
+            status="dry_run",
+            backend_script=backend_script,
+            command=command,
+            output_dir=output_dir,
+            target_profile=target_profile,
+            count=count,
+            samples=[],
+            failed_samples=[],
+            seed=seed,
+            anchor_sides=anchor_sides,
+            samples_requested=samples,
+        )
+        plan["backend"] = "reference_blackdot_normal"
+        plan["raw_backend_output_dir"] = str(raw_output_dir)
+        write_json(output_dir / "backend_run_log.json", log)
+        write_json(output_dir / "generation_plan.json", plan)
+        write_dataset_summary(output_dir / "dataset_summary.json", plan)
+        return plan
+
+    completed = subprocess.run(command, cwd=str(project_root), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+    log["returncode"] = completed.returncode
+    log["stdout"] = completed.stdout
+    if completed.returncode != 0:
+        log["failure_reason"] = "reference black-dot normal backend returned {0}".format(completed.returncode)
+        write_json(output_dir / "backend_run_log.json", log)
+        plan = _build_generic_normal_plan(
+            status="failed",
+            backend_script=backend_script,
+            command=command,
+            output_dir=output_dir,
+            target_profile=target_profile,
+            count=count,
+            samples=[],
+            failed_samples=[{"index": None, "seed": seed, "errors": [log["failure_reason"]]}],
+            seed=seed,
+            anchor_sides=anchor_sides,
+            samples_requested=samples,
+        )
+        plan["backend"] = "reference_blackdot_normal"
+        plan["raw_backend_output_dir"] = str(raw_output_dir)
+        write_json(output_dir / "generation_plan.json", plan)
+        write_dataset_summary(output_dir / "dataset_summary.json", plan)
+        return plan
+
+    adapter_result = adapt_reference_blackdot_outputs(
+        raw_output_dir=raw_output_dir,
+        framework_output_dir=output_dir,
+        start_index=0,
+        backend_model="P101040_blue",
+        anchor_side=anchor_side,
+        seed=seed,
+    )
+    successful_samples = []
+    failed_samples = []
+    for sample in adapter_result["samples"]:
+        sample["is_normal"] = True
+        sample["defect_types"] = []
+        sample["defects"] = []
+        sample["defect_type"] = None
+        try:
+            sample["quality_checks"] = run_normal_quality_checks(sample)
+            successful_samples.append(sample)
+        except Exception as exc:
+            failed_samples.append({"index": sample.get("index"), "seed": sample.get("seed"), "errors": [str(exc)]})
+    log["files_produced"] = adapter_result["files_produced"]
+    log["failure_reason"] = None if not failed_samples else "One or more normal samples failed quality checks."
+    write_json(output_dir / "backend_run_log.json", log)
+    plan = _build_generic_normal_plan(
+        status="rendered" if not failed_samples else "rendered_with_failures",
+        backend_script=backend_script,
+        command=command,
+        output_dir=output_dir,
+        target_profile=target_profile,
+        count=count,
+        samples=successful_samples,
+        failed_samples=failed_samples,
+        seed=seed,
+        anchor_sides=anchor_sides,
+        samples_requested=samples,
+    )
+    plan["backend"] = "reference_blackdot_normal"
+    plan["raw_backend_output_dir"] = str(raw_output_dir)
     write_json(output_dir / "generation_plan.json", plan)
     write_dataset_summary(output_dir / "dataset_summary.json", plan)
     return plan
@@ -1453,6 +1611,7 @@ def adapt_reference_blackdot_outputs(
         per_image_metadata = {
             "schema_version": "0.1",
             "source_backend": "reference_blend_blackdot_multi_model.py",
+            "is_normal": bool(sample.get("is_normal", raw_metadata.get("is_normal", False))),
             "seed": sample_seed,
             "backend_model": backend_model or raw_metadata.get("model_name"),
             "anchor_side": sample_anchor_side,
@@ -1502,6 +1661,7 @@ def adapt_reference_blackdot_outputs(
                 "status": "rendered",
                 "seed": sample_seed,
                 "backend_model": backend_model or raw_metadata.get("model_name"),
+                "is_normal": bool(sample.get("is_normal", raw_metadata.get("is_normal", False))),
                 "anchor_side": sample_anchor_side,
                 "requested_anchor_side": anchor_side,
                 "defect_type": sample.get(
@@ -2040,6 +2200,7 @@ def _build_reference_blackdot_command(
     object_transform_camera_side="front",
     object_rotate_deg=None,
     object_translate=None,
+    normal_mode=False,
 ):
     command = [
         str(python_executable),
@@ -2066,6 +2227,8 @@ def _build_reference_blackdot_command(
         command.extend(["--blend", str(blend_path)])
     if material_path is not None:
         command.extend(["--material_json", str(material_path)])
+    if normal_mode:
+        command.append("--normal_mode")
     _append_object_transform_args(command, object_transform_mode, object_transform_camera_side, object_rotate_deg, object_translate)
     backend_params = _extract_blackdot_backend_parameters(defect_config or {})
     mapping = {

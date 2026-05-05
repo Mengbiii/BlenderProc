@@ -1,6 +1,6 @@
 # Approved Non-Black Defect 3k Filler Generation Handoff
 
-Last updated: 2026-05-04
+Last updated: 2026-05-05
 
 This handoff is for the next maintenance session. Scope is the approved non-black-dot defect portion of the final 3k-5k synthetic dataset, plus the approved same-scene non-black cooccurrence blocks.
 
@@ -22,6 +22,12 @@ block.
 As of 2026-05-04, this document remains the active non-black filler plan. The UI
 cooccurrence selector is intentionally limited to the two cooccurrence rows in
 this document.
+
+As of 2026-05-05, the accepted non-black outputs have been included in the
+assembled 3k-5k dataset. The current final manifest contains `3472` rows:
+`2772` defect rows and `700` regenerated normal rows. Keep this document as the
+approved scope reference for any future top-up generation, but do not rerun
+completed blocks unless a new visual failure is found.
 
 ## Current Scope Rules
 

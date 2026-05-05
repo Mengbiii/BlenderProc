@@ -118,6 +118,7 @@ def parse_args():
     parser.add_argument("--model_blend", default=None, help="Override appended model blend for QC71336 presets.")
     parser.add_argument("--material_json", "--material-json", default=None, help="Optional visual material calibration JSON for the main object material.")
     parser.add_argument("--anchor_sides", nargs="+", choices=["front", "back"], default=None)
+    parser.add_argument("--normal_mode", action="store_true", help="Render normal/no-defect samples with the reference black-dot scene, camera, lighting, and material setup.")
     parser.add_argument("--black_dot_radius_min_scale", type=float, default=None)
     parser.add_argument("--black_dot_radius_max_scale", type=float, default=None)
     parser.add_argument("--black_dot_depth_min_scale", type=float, default=None)
@@ -1848,7 +1849,8 @@ def write_notes(output_dir, args, preset):
         f"- num: `{args.num}`",
         f"- seed: `{args.seed}`",
         f"- anchor_sides: `{args.anchor_sides or preset['anchor_sides']}`",
-        "- label policy: mask and YOLO bbox include the main black-dot object only; local patch is visual support.",
+        f"- normal_mode: `{bool(args.normal_mode)}`",
+        "- label policy: in defect mode, mask and YOLO bbox include the main black-dot object only; in normal mode, mask and YOLO label are empty.",
         "- camera, light, and optional object-pose jitter are sampled per accepted image.",
         "- by default only the first debug blend is saved when `--save_blend --save_blend_only_first` are used.",
     ]
@@ -1889,12 +1891,14 @@ def main():
         "geometry_profile": args.model,
         "appearance_profile": preset["appearance_profile"],
         "material_family": preset["material_family"],
-        "defect_type": "black_dot",
-        "defect_type_internal": "black_dot",
-        "defect_type_canonical": "black_dot",
-        "defect_family": "embedded_internal",
-        "support_artifacts": ["black_dot_coupling_patch"],
-        "label_policy": "mask_main_defect_only",
+        "generation_mode": "normal" if args.normal_mode else "black_dot",
+        "is_normal": bool(args.normal_mode),
+        "defect_type": None if args.normal_mode else "black_dot",
+        "defect_type_internal": None if args.normal_mode else "black_dot",
+        "defect_type_canonical": None if args.normal_mode else "black_dot",
+        "defect_family": None if args.normal_mode else "embedded_internal",
+        "support_artifacts": [] if args.normal_mode else ["black_dot_coupling_patch"],
+        "label_policy": "empty_normal_mask_and_label" if args.normal_mode else "mask_main_defect_only",
         "source_paths": setup["source_paths"],
         "material_info": setup.get("material_info"),
         "render_width": args.width,
@@ -1926,6 +1930,87 @@ def main():
             preset,
         )
         try:
+            if args.normal_mode:
+                anchor = sample_anchor(objects, active_camera_presets, rng, allowed_sides, preset_config=preset)
+                camera_side = anchor["side"]
+                apply_camera_preset(camera, active_camera_presets[camera_side])
+                configure_support_for_view_side(objects, camera_side)
+                view_transform = {
+                    "enabled": False,
+                    "mode": args.object_transform_mode,
+                    "camera_side": camera_side,
+                    "physical_anchor_side": camera_side,
+                    "environment_transform": "none",
+                    "normal_mode": True,
+                }
+                if args.object_transform_mode == "keep_camera":
+                    camera_jitter = {"enabled": False, "reason": "object_transform_keep_camera"}
+                    light_jitter = {"enabled": False, "reason": "object_transform_keep_camera"}
+                else:
+                    camera_jitter = apply_camera_jitter(
+                        camera,
+                        objects,
+                        camera_side,
+                        Vector(anchor["world_point"]),
+                        rng,
+                        args.camera_jitter_strength,
+                    )
+                    light_jitter = apply_light_jitter(scene_state, rng, args.light_jitter_strength)
+                projected = world_to_camera_view(bpy.context.scene, camera, Vector(anchor["world_point"]))
+                if projected.z <= 0.0 or not (0.04 <= projected.x <= 0.96 and 0.04 <= projected.y <= 0.96):
+                    raise RuntimeError(f"normal reference point outside camera frame after jitter: {[projected.x, projected.y, projected.z]}")
+
+                rgb_path = rgb_dir / f"{image_index:06d}.png"
+                mask_path = mask_dir / f"{image_index:06d}.png"
+                label_path = label_dir / f"{image_index:06d}.txt"
+                render_still(rgb_path)
+                width = int(bpy.context.scene.render.resolution_x)
+                height = int(bpy.context.scene.render.resolution_y)
+                save_binary_mask_image(mask_path, [0] * (width * height), width, height, "UNIFIED_NORMAL_EMPTY_MASK_EXPORT")
+                label_path.write_text("", encoding="utf-8")
+
+                blend_rel = None
+                if args.save_blend and (not args.save_blend_only_first or accepted == 0):
+                    blend_path = blend_dir / f"{image_index:06d}_scene.blend"
+                    pack_error = save_blend_copy(blend_path)
+                    blend_rel = str(blend_path.relative_to(output_dir))
+
+                metadata["samples"].append({
+                    "image_id": f"{image_index:06d}",
+                    "rgb": str(rgb_path.relative_to(output_dir)),
+                    "mask": str(mask_path.relative_to(output_dir)),
+                    "overlay": None,
+                    "label_yolo": str(label_path.relative_to(output_dir)),
+                    "blend_file": blend_rel,
+                    "has_defect": False,
+                    "is_normal": True,
+                    "defects": [],
+                    "defect_types": [],
+                    "defect_type": None,
+                    "defect_type_internal": None,
+                    "defect_type_canonical": None,
+                    "defect_family": None,
+                    "support_artifacts": [],
+                    "bbox": None,
+                    "mask_width": width,
+                    "mask_height": height,
+                    "anchor_side": camera_side,
+                    "anchor_score": float(anchor["score"]),
+                    "anchor_local_xyz": anchor["local_xyz"],
+                    "anchor_view_alignment": float(anchor["view_alignment"]),
+                    "anchor_projected_xy": [float(projected.x), float(projected.y), float(projected.z)],
+                    "object_jitter": object_jitter,
+                    "camera_jitter": camera_jitter,
+                    "light_jitter": light_jitter,
+                    "view_transform": view_transform,
+                    "random_seed": args.seed + image_index * 1009 + total_attempts,
+                    "normal_mode_backend": "reference_blend_blackdot_multi_model.py",
+                })
+                accepted += 1
+                frame_index += 1
+                print(f"[{accepted:04d}/{args.num:04d}] frame={image_index:06d} normal side={camera_side}")
+                continue
+
             defect = add_black_dot(
                 args.model,
                 objects,

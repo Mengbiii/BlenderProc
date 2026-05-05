@@ -117,10 +117,11 @@ def main():
     bproc.init()
     product = load_scene_model(args)
     material_profile = load_material_profile(args.material_profile)
-    ensure_material(product, args.target, defaults, preserve_existing=args.preserve_materials, material_profile=material_profile)
+    preserve_materials = args.preserve_materials and not (args.normal_mode and is_ql3_target(args.target))
+    ensure_material(product, args.target, defaults, preserve_existing=preserve_materials, material_profile=material_profile)
     scene_profile = inspect_scene_profile(args)
     camera = setup_camera(product, args.width, args.height, scene_profile)
-    setup_lighting(product, camera, args.target)
+    setup_lighting(product, camera, args.target, force_generic_lighting=args.force_generic_lighting)
     render_device_info = configure_render(args.width, args.height, args.samples)
 
     if args.normal_mode:
@@ -147,7 +148,7 @@ def main():
             if not view_transform["enabled"]:
                 apply_camera_domain_randomization(camera, product, camera_side, args.target, rng)
         ensure_camera_backdrop(product, camera, args.target)
-        setup_lighting(product, camera, args.target)
+        setup_lighting(product, camera, args.target, force_generic_lighting=args.force_generic_lighting)
         if view_transform["enabled"]:
             apply_object_view_transform(product, defect, view_transform)
         rgb_path = rgb_dir / f"{sample_id:06d}.png"
@@ -220,12 +221,43 @@ def run_normal_generation(args, output_dir, product, camera, scene_profile, rend
         bpy.context.view_layer.update()
         cleanup_defects()
 
-        camera_side = cooccurrence_camera_side(args)
-        if not scene_profile["uses_existing_camera"]:
-            position_camera_for_side(camera, product, camera_side, args.target)
-            apply_camera_domain_randomization(camera, product, camera_side, args.target, rng)
-        ensure_camera_backdrop(product, camera, args.target)
-        setup_lighting(product, camera, args.target)
+        physical_side = cooccurrence_camera_side(args)
+        normal_view_transform = build_normal_tabletop_view_transform(physical_side)
+        if normal_view_transform["enabled"]:
+            apply_object_view_transform(product, {"anchor_side": physical_side}, normal_view_transform)
+        camera_side = normal_view_transform.get("camera_side", physical_side)
+        camera_randomization = {"enabled": False}
+        visibility = {"ok": True, "attempt": 0}
+        max_camera_attempts = 10
+        for camera_attempt in range(max_camera_attempts):
+            if not scene_profile["uses_existing_camera"]:
+                position_camera_for_side(camera, product, camera_side, args.target)
+                camera_randomization = apply_camera_domain_randomization(
+                    camera,
+                    product,
+                    camera_side,
+                    args.target,
+                    rng,
+                    normal_domain_randomization=True,
+                )
+            ensure_camera_backdrop(product, camera, args.target, normal_mode=True)
+            visibility = product_camera_visibility(camera, product, args.width, args.height)
+            visibility["attempt"] = camera_attempt + 1
+            visibility["ok"] = normal_visibility_ok(visibility, args.target)
+            if visibility["ok"] or scene_profile["uses_existing_camera"]:
+                break
+        lighting_randomization = setup_lighting(
+            product,
+            camera,
+            args.target,
+            rng=rng,
+            force_generic_lighting=args.force_generic_lighting,
+            domain_randomization=True,
+            energy_jitter=0.30,
+        )
+        background_randomization = capture_world_background()
+        backdrop_state = capture_backdrop_state()
+        camera_state = capture_camera_state(camera)
 
         rgb_path = rgb_dir / f"{sample_id:06d}.png"
         mask_path = mask_dir / f"{sample_id:06d}.png"
@@ -251,6 +283,15 @@ def run_normal_generation(args, output_dir, product, camera, scene_profile, rend
             "generic_backend": True,
             "generation_mode": "normal",
             "seed": args.seed + sample_id,
+            "domain_randomization": {
+                "camera": camera_randomization,
+                "camera_state": camera_state,
+                "lighting": lighting_randomization,
+                "background": background_randomization,
+                "backdrop": backdrop_state,
+                "visibility": visibility,
+            },
+            "normal_view_transform": normal_view_transform,
         }
         metadata_path.write_text(json.dumps(sample_record, indent=2, ensure_ascii=False), encoding="utf-8")
         samples.append(sample_record)
@@ -303,7 +344,7 @@ def run_cooccurrence_generation(args, defaults, output_dir, product, camera, sce
             if args.object_transform_mode == "none":
                 apply_camera_domain_randomization(camera, product, camera_side, args.target, rng)
         ensure_camera_backdrop(product, camera, args.target)
-        setup_lighting(product, camera, args.target)
+        setup_lighting(product, camera, args.target, rng=rng, force_generic_lighting=args.force_generic_lighting)
 
         records = create_cooccurrence_defects(product, args, defects_to_create, rng, defaults, camera)
         view_transform = build_object_view_transform(args, {"anchor_side": camera_side})
@@ -597,7 +638,11 @@ def load_scene_model(args):
             bpy.ops.wm.open_mainfile(filepath=str(blend_path))
             if args.force_generic_camera:
                 bpy.context.scene[FORCE_GENERIC_CAMERA_KEY] = True
-            if is_qc71336_gray_target(args.target):
+            if is_p101040_target(args.target):
+                ensure_background_support(base_color=(0.93, 0.94, 0.96, 1.0), roughness=0.78, specular=0.06)
+                tune_p101040_reference_lighting()
+                reference_objects = pick_reference_mesh_objects()
+            elif is_qc71336_gray_target(args.target):
                 ensure_background_support()
                 tune_qc71336_gray_reference_lighting()
                 reference_objects = pick_reference_mesh_objects()
@@ -630,8 +675,14 @@ def load_scene_model(args):
                 imported.sort(key=lambda obj: len(obj.data.vertices), reverse=True)
                 primary = imported[0]
                 primary.name = f"GENERIC_TARGET_{args.target}"
+                if reference_objects and is_p101040_target(args.target):
+                    fit_p101040_objects_to_reference(imported, reference_objects, scale_factor=0.95)
+                    for obj in reference_objects:
+                        obj.hide_render = True
+                        obj.hide_viewport = True
                 hide_other_meshes(primary)
-                center_object(primary)
+                if not (reference_objects and is_p101040_target(args.target)):
+                    center_object(primary)
                 bpy.context.scene[FORCE_GENERIC_CAMERA_KEY] = True
                 return primary
     meshes = [obj for obj in bpy.data.objects if obj.type == "MESH"]
@@ -762,19 +813,60 @@ def fit_objects_to_reference(imported_objects, reference_objects, scale_factor=1
     bpy.context.view_layer.update()
 
 
-def ensure_background_support():
+def fit_p101040_objects_to_reference(imported_objects, reference_objects, scale_factor=0.95):
+    candidate_rotations = [
+        (0.0, 0.0, 0.0),
+        (math.radians(90.0), 0.0, 0.0),
+        (math.radians(-90.0), 0.0, 0.0),
+        (0.0, math.radians(90.0), 0.0),
+        (0.0, math.radians(-90.0), 0.0),
+        (math.radians(180.0), 0.0, 0.0),
+    ]
+    ref_min, ref_max = world_bbox_many(reference_objects)
+    ref_dims = ref_max - ref_min
+    ref_xy = sorted([abs(float(ref_dims.x)), abs(float(ref_dims.y))], reverse=True)
+    original_rotations = [obj.rotation_euler.copy() for obj in imported_objects]
+    best_rotation = candidate_rotations[0]
+    best_score = None
+    for rotation in candidate_rotations:
+        for obj, original in zip(imported_objects, original_rotations):
+            obj.rotation_euler = original.copy()
+            obj.rotation_euler.rotate_axis("X", rotation[0])
+            obj.rotation_euler.rotate_axis("Y", rotation[1])
+            obj.rotation_euler.rotate_axis("Z", rotation[2])
+        bpy.context.view_layer.update()
+        src_min, src_max = world_bbox_many(imported_objects)
+        src_dims = src_max - src_min
+        src_xy = sorted([abs(float(src_dims.x)), abs(float(src_dims.y))], reverse=True)
+        thickness = abs(float(src_dims.z))
+        xy_penalty = abs((src_xy[0] / max(src_xy[1], 1e-6)) - (ref_xy[0] / max(ref_xy[1], 1e-6)))
+        score = thickness + 0.25 * xy_penalty
+        if best_score is None or score < best_score:
+            best_score = score
+            best_rotation = rotation
+    for obj, original in zip(imported_objects, original_rotations):
+        obj.rotation_euler = original.copy()
+        obj.rotation_euler.rotate_axis("X", best_rotation[0])
+        obj.rotation_euler.rotate_axis("Y", best_rotation[1])
+        obj.rotation_euler.rotate_axis("Z", best_rotation[2])
+    bpy.context.view_layer.update()
+    fit_objects_to_reference(imported_objects, reference_objects, scale_factor=scale_factor)
+
+
+def ensure_background_support(base_color=(0.82, 0.825, 0.83, 1.0), roughness=0.84, specular=0.06):
     if bpy.data.objects.get("GENERIC_REFERENCE_BACKDROP") is not None:
         return
     bpy.ops.mesh.primitive_plane_add(size=20.0, location=(0.0, 0.0, -0.15))
     plane = bpy.context.active_object
     plane.name = "GENERIC_REFERENCE_BACKDROP"
-    mat = make_basic_principled_material("GENERIC_REFERENCE_BACKDROP_MAT", (0.82, 0.825, 0.83, 1.0), 0.84, 0.06)
+    plane.scale = (2.5, 2.5, 1.0)
+    mat = make_basic_principled_material("GENERIC_REFERENCE_BACKDROP_MAT", base_color, roughness, specular)
     plane.data.materials.append(mat)
     bpy.context.view_layer.update()
 
 
-def ensure_camera_backdrop(product, camera, target):
-    if not (is_qc7_5244_target(target) or is_ql3_target(target) or is_qc71336_gray_target(target)):
+def ensure_camera_backdrop(product, camera, target, normal_mode=False):
+    if not normal_mode and not (is_qc7_5244_target(target) or is_ql3_target(target) or is_qc71336_gray_target(target)):
         return
     for obj in list(bpy.data.objects):
         if obj.name.startswith("GENERIC_CAMERA_BACKDROP"):
@@ -783,6 +875,31 @@ def ensure_camera_backdrop(product, camera, target):
     center = (min_v + max_v) * 0.5
     dims = max_v - min_v
     max_dim = max(float(dims.x), float(dims.y), float(dims.z), 1.0)
+    if normal_mode:
+        plane = bpy.data.objects.get("GENERIC_REFERENCE_BACKDROP")
+        created_table = False
+        if plane is None:
+            bpy.ops.mesh.primitive_plane_add(size=max_dim * 8.0, location=(center.x, center.y, min_v.z - max_dim * 0.035))
+            plane = bpy.context.active_object
+            plane.name = "GENERIC_CAMERA_BACKDROP"
+            created_table = True
+        else:
+            plane.location = (center.x, center.y, min_v.z - max_dim * 0.035)
+            plane.hide_render = False
+            plane.hide_viewport = False
+        plane.rotation_euler = (0.0, 0.0, 0.0)
+        table_scale = 1.0 if created_table else max(0.40 * max_dim, 0.40)
+        plane.scale = (table_scale, table_scale, 1.0)
+        mat = make_basic_principled_material(
+            "GENERIC_CAMERA_BACKDROP_MAT",
+            (0.50, 0.505, 0.51, 1.0),
+            0.88,
+            0.04,
+        )
+        plane.data.materials.clear()
+        plane.data.materials.append(mat)
+        bpy.context.view_layer.update()
+        return
     view_dir = (center - camera.location).normalized()
     location = center + view_dir * max_dim * 0.62
     plane = bpy.data.objects.get("GENERIC_REFERENCE_BACKDROP") if is_qc71336_gray_target(target) else None
@@ -806,6 +923,7 @@ def ensure_camera_backdrop(product, camera, target):
         color = (0.76, 0.765, 0.768, 1.0)
         roughness = 0.90
     mat = make_basic_principled_material("GENERIC_CAMERA_BACKDROP_MAT", color, roughness, 0.035)
+    plane.data.materials.clear()
     plane.data.materials.append(mat)
     bpy.context.view_layer.update()
 
@@ -871,6 +989,9 @@ def apply_qc71336_gray_override_material(obj):
 
 
 def ensure_material(obj, target, defaults, preserve_existing=False, material_profile=None):
+    if is_p101040_target(target):
+        apply_p101040_reference_material(obj)
+        return
     if preserve_existing and obj.data.materials:
         return
     color = (0.58, 0.60, 0.62, 1.0)
@@ -895,25 +1016,57 @@ def ensure_material(obj, target, defaults, preserve_existing=False, material_pro
     mat = bpy.data.materials.new("GENERIC_PRODUCT_MAT")
     mat.use_nodes = True
     bsdf = mat.node_tree.nodes.get("Principled BSDF")
+    if is_ql3_target(target):
+        color = (0.012, 0.014, 0.016, 1.0)
     bsdf.inputs["Base Color"].default_value = color
     roughness = float(params.get("roughness", 0.62))
-    if is_qc7_5244_target(target):
+    if is_ql3_target(target):
+        roughness = 0.94
+    elif is_qc7_5244_target(target):
         roughness = max(roughness, 0.78)
     bsdf.inputs["Roughness"].default_value = roughness
     if "Alpha" in bsdf.inputs:
         bsdf.inputs["Alpha"].default_value = float(params.get("alpha", 1.0))
     if "Specular IOR Level" in bsdf.inputs:
         specular_value = float(params.get("specular_ior_level", params.get("specular", 0.36)))
-        if is_qc7_5244_target(target):
+        if is_ql3_target(target):
+            specular_value = min(specular_value, 0.04)
+        elif is_qc7_5244_target(target):
             specular_value = min(specular_value, 0.22)
         bsdf.inputs["Specular IOR Level"].default_value = specular_value
     elif "Specular" in bsdf.inputs:
         specular_value = float(params.get("specular", 0.36))
-        if is_qc7_5244_target(target):
+        if is_ql3_target(target):
+            specular_value = min(specular_value, 0.04)
+        elif is_qc7_5244_target(target):
             specular_value = min(specular_value, 0.22)
         bsdf.inputs["Specular"].default_value = specular_value
     obj.data.materials.clear()
     obj.data.materials.append(mat)
+
+
+def apply_p101040_reference_material(obj):
+    center = make_basic_principled_material("GENERIC_P101040_CENTER_PLANE", (0.18, 0.37, 0.68, 1.0), 0.34, 0.30)
+    slope = make_basic_principled_material("GENERIC_P101040_SLOPE_BAND", (0.14, 0.35, 0.72, 1.0), 0.30, 0.34)
+    outer = make_basic_principled_material("GENERIC_P101040_OUTER_BAND", (0.10, 0.31, 0.72, 1.0), 0.26, 0.34)
+    add_noise_bump(center, scale=780.0, strength=0.0038, distance=0.0008)
+    add_noise_bump(slope, scale=700.0, strength=0.0025, distance=0.0007)
+    obj.data.materials.clear()
+    obj.data.materials.append(center)
+    obj.data.materials.append(slope)
+    obj.data.materials.append(outer)
+    bb_min = Vector((min(v[0] for v in obj.bound_box), min(v[1] for v in obj.bound_box), min(v[2] for v in obj.bound_box)))
+    bb_max = Vector((max(v[0] for v in obj.bound_box), max(v[1] for v in obj.bound_box), max(v[2] for v in obj.bound_box)))
+    span = bb_max - bb_min
+    for poly in obj.data.polygons:
+        x_ratio = (poly.center.x - bb_min.x) / max(float(span.x), 1e-6)
+        y_ratio = (poly.center.y - bb_min.y) / max(float(span.y), 1e-6)
+        if 0.22 <= x_ratio <= 0.78 and 0.22 <= y_ratio <= 0.78 and poly.normal.z > 0.45:
+            poly.material_index = 0
+        elif poly.normal.z > 0.20:
+            poly.material_index = 1
+        else:
+            poly.material_index = 2
 
 
 def setup_camera(obj, width, height, scene_profile):
@@ -969,12 +1122,14 @@ def position_qc71336_gray_reference_camera(camera, obj, side):
     bpy.context.view_layer.update()
 
 
-def apply_camera_domain_randomization(camera, obj, side, target, rng):
-    if not is_qc71336_gray_target(target):
-        return {"enabled": False}
+def apply_camera_domain_randomization(camera, obj, side, target, rng, normal_domain_randomization=False):
     min_v, max_v = world_bbox(obj)
     span = max_v - min_v
     max_dim = max(float(abs(span.x)), float(abs(span.y)), float(abs(span.z)), 1e-3)
+    if normal_domain_randomization:
+        return position_tabletop_normal_camera(camera, obj, side, target, rng)
+    if not is_qc71336_gray_target(target):
+        return {"enabled": False}
     side_sign = 1.0 if side == "front" else -1.0
     camera.location.x += rng.uniform(-0.040, 0.040) * max_dim
     camera.location.y += rng.uniform(-0.040, 0.040) * max_dim
@@ -986,27 +1141,163 @@ def apply_camera_domain_randomization(camera, obj, side, target, rng):
     camera.data.shift_x = max(-0.08, min(0.08, camera.data.shift_x + rng.uniform(-0.012, 0.012)))
     camera.data.shift_y = max(-0.08, min(0.08, camera.data.shift_y + rng.uniform(-0.012, 0.012)))
     bpy.context.view_layer.update()
-    return {"enabled": True}
+    return {"enabled": True, "profile": "qc71336_gray_reference_domain_randomization_v1", "target_family": "qc71336_gray"}
 
 
-def setup_lighting(obj, camera=None, target=""):
+def position_tabletop_normal_camera(camera, obj, side, target, rng):
+    min_v, max_v = world_bbox(obj)
+    span = max_v - min_v
+    max_dim = max(float(abs(span.x)), float(abs(span.y)), float(abs(span.z)), 1e-3)
+    center = (min_v + max_v) * 0.5
+    table_focus = Vector((center.x, center.y, min_v.z + max(0.50 * float(abs(span.z)), 0.08 * max_dim)))
+
+    if side == "side" or is_ql3_target(target):
+        base_offset = Vector((0.95, -0.34, 2.15))
+        side_name = "side_oblique_tabletop"
+    elif side == "back":
+        base_offset = Vector((0.08, 0.42, 2.58))
+        side_name = "back_oblique_tabletop"
+    else:
+        base_offset = Vector((-0.08, -0.42, 2.58))
+        side_name = "front_oblique_tabletop"
+
+    offset_jitter = Vector(
+        (
+            rng.uniform(-0.035, 0.035),
+            rng.uniform(-0.035, 0.035),
+            rng.uniform(-0.040, 0.040),
+        )
+    )
+    focus_jitter = Vector(
+        (
+            rng.uniform(-0.025, 0.025) * max_dim,
+            rng.uniform(-0.025, 0.025) * max_dim,
+            rng.uniform(-0.010, 0.010) * max_dim,
+        )
+    )
+    camera.location = center + (base_offset + offset_jitter) * max_dim
+    direction = (table_focus + focus_jitter) - camera.location
+    camera.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
+    roll_deg = rng.uniform(-2.0, 2.0)
+    camera.rotation_euler.rotate_axis("Z", math.radians(roll_deg))
+    camera.data.type = "PERSP"
+    camera.data.lens = tabletop_normal_lens(target) + rng.uniform(-2.0, 2.0)
+    camera.data.sensor_width = 36.0
+    camera.data.sensor_fit = "HORIZONTAL"
+    camera.data.clip_start = 0.01
+    camera.data.clip_end = 1000.0
+    camera.data.shift_x = rng.uniform(-0.015, 0.015)
+    camera.data.shift_y = tabletop_normal_shift_y(target) + rng.uniform(-0.010, 0.010)
+    bpy.context.view_layer.update()
+    return {
+        "enabled": True,
+        "profile": "p101040_blackdot_tabletop_normal_camera_v1",
+        "target_family": "generic_tabletop",
+        "requested_side": side,
+        "effective_camera_side": side_name,
+        "offset": [float(value) for value in base_offset],
+        "offset_jitter": [float(value) for value in offset_jitter],
+        "focus_jitter": [float(value) for value in focus_jitter],
+        "roll_degrees": float(roll_deg),
+        "lens": float(camera.data.lens),
+    }
+
+
+def tabletop_normal_lens(target):
+    if is_p101040_target(target):
+        return 118.0
+    if is_qc7_5244_target(target):
+        return 78.0
+    if is_ql3_target(target):
+        return 70.0
+    if is_qc71336_gray_target(target):
+        return 66.0
+    if is_qc71336_white_target(target) or is_qc71336_black_target(target):
+        return 64.0
+    return 72.0
+
+
+def tabletop_normal_shift_y(target):
+    if is_qc7_5244_target(target):
+        return 0.025
+    if is_qc71336_gray_target(target) or is_qc71336_white_target(target) or is_qc71336_black_target(target):
+        return -0.02
+    return 0.0
+
+
+def position_p101040_normal_camera(camera, obj, side, target, rng):
+    min_v, max_v = world_bbox(obj)
+    span = max_v - min_v
+    max_dim = max(float(abs(span.x)), float(abs(span.y)), float(abs(span.z)), 1e-3)
+    center = (min_v + max_v) * 0.5
+    focus_target = center + Vector((0.0, 0.015 * max_dim, 0.0))
+    base_offset = Vector((0.0, -0.18, 2.65)) * max_dim
+    jitter = Vector(
+        (
+            rng.uniform(-0.018, 0.018) * max_dim,
+            rng.uniform(-0.018, 0.018) * max_dim,
+            rng.uniform(-0.024, 0.024) * max_dim,
+        )
+    )
+    camera.location = center + base_offset + jitter
+    direction = focus_target - camera.location
+    camera.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
+    roll_deg = 90.0 + rng.uniform(-2.4, 2.4)
+    camera.rotation_euler.rotate_axis("Z", math.radians(roll_deg))
+    camera.data.type = "PERSP"
+    camera.data.lens = 118.0 + rng.uniform(-3.0, 3.0)
+    camera.data.sensor_width = 36.0
+    camera.data.sensor_fit = "HORIZONTAL"
+    camera.data.clip_start = 0.01
+    camera.data.clip_end = 1000.0
+    camera.data.shift_x = max(-0.12, min(0.12, rng.uniform(-0.018, 0.018)))
+    camera.data.shift_y = 0.0 if side == "front" else 0.0
+    bpy.context.view_layer.update()
+    return {
+        "enabled": True,
+        "profile": "p101040_reference_blackdot_camera_domain_randomization_v2",
+        "target_family": "p101040",
+        "requested_side": side,
+        "effective_camera_side": "front_reference",
+        "roll_degrees": float(roll_deg),
+        "camera_location_jitter": [float(value) for value in jitter],
+        "lens": float(camera.data.lens),
+    }
+
+
+def setup_lighting(
+    obj,
+    camera=None,
+    target="",
+    rng=None,
+    force_generic_lighting=False,
+    domain_randomization=False,
+    energy_jitter=0.20,
+):
+    rng = rng or random
     min_v, max_v = world_bbox(obj)
     dims = max_v - min_v
     center = (min_v + max_v) * 0.5
     max_dim = max(float(dims.x), float(dims.y), float(dims.z), 1.0)
-    existing_lights = [light for light in bpy.data.objects if light.type == "LIGHT" and not light.name.startswith("GENERIC_")]
+    existing_lights = [
+        light
+        for light in bpy.data.objects
+        if light.type == "LIGHT" and not light.name.startswith("GENERIC_") and not force_generic_lighting
+    ]
     if existing_lights:
         if is_qc71336_gray_target(target):
             tune_qc71336_gray_reference_lighting()
+        elif is_p101040_target(target):
+            tune_p101040_reference_lighting()
         elif is_qc71336_white_target(target):
             tune_qc71336_white_generic_lighting()
-        randomize_existing_lights(existing_lights, target)
+        randomize_existing_lights(existing_lights, target, rng=rng, energy_jitter=energy_jitter)
     for light in list(bpy.data.objects):
         if light.type == "LIGHT" and light.name.startswith("GENERIC_"):
             bpy.data.objects.remove(light, do_unlink=True)
     if existing_lights:
-        configure_world_background(target)
-        return
+        background = configure_world_background(target, rng=rng, domain_randomization=domain_randomization)
+        return {"mode": "existing_lights", "lights": capture_lights(existing_lights), "background": background}
     if camera is not None:
         direction = (camera.location - center).normalized()
         key_location = center + direction * max_dim * 1.2 + Vector((0.0, 0.0, max_dim * 0.5))
@@ -1022,11 +1313,43 @@ def setup_lighting(obj, camera=None, target=""):
         key_energy, fill_energy, key_size = 980, 210, max_dim * 1.70
     elif is_ql3_target(target):
         key_energy, fill_energy, key_size = 950, 210, max_dim * 1.55
+        if domain_randomization:
+            key_energy, fill_energy, key_size = 540, 95, max_dim * 1.70
     else:
         key_energy, fill_energy, key_size = 1400, 500, max_dim * 1.4
-    add_area_light("GENERIC_KEY_LIGHT", key_location, key_energy, key_size)
-    add_area_light("GENERIC_FILL_LIGHT", center + Vector((-max_dim * 0.8, max_dim * 0.6, max_dim * 0.9)), fill_energy, max_dim * 2.2)
-    configure_world_background(target)
+    fill_location = center + Vector((-max_dim * 0.8, max_dim * 0.6, max_dim * 0.9))
+    key_size_value = key_size
+    fill_size_value = max_dim * 2.2
+    key_energy_value = key_energy
+    fill_energy_value = fill_energy
+    if domain_randomization:
+        if not is_p101040_target(target):
+            key_energy *= 0.58
+            fill_energy *= 0.48
+        key_location += Vector(
+            (
+                rng.uniform(-0.12, 0.12) * max_dim,
+                rng.uniform(-0.12, 0.12) * max_dim,
+                rng.uniform(-0.08, 0.08) * max_dim,
+            )
+        )
+        fill_location = center + Vector(
+            (
+                (-0.8 + rng.uniform(-0.14, 0.14)) * max_dim,
+                (0.6 + rng.uniform(-0.14, 0.14)) * max_dim,
+                (0.9 + rng.uniform(-0.10, 0.10)) * max_dim,
+            )
+        )
+        energy_min = max(0.0, 1.0 - float(energy_jitter))
+        energy_max = 1.0 + float(energy_jitter)
+        key_energy_value *= rng.uniform(energy_min, energy_max)
+        fill_energy_value *= rng.uniform(energy_min, energy_max)
+        key_size_value *= rng.uniform(0.86, 1.18)
+        fill_size_value *= rng.uniform(0.86, 1.18)
+    key = add_area_light("GENERIC_KEY_LIGHT", key_location, key_energy_value, key_size_value)
+    fill = add_area_light("GENERIC_FILL_LIGHT", fill_location, fill_energy_value, fill_size_value)
+    background = configure_world_background(target, rng=rng, domain_randomization=domain_randomization)
+    return {"mode": "generic_lights", "lights": capture_lights([key, fill]), "background": background}
 
 
 def build_object_view_transform(args, defect):
@@ -1055,6 +1378,24 @@ def build_object_view_transform(args, defect):
     }
 
 
+def build_normal_tabletop_view_transform(physical_side):
+    physical_side = physical_side or "front"
+    enabled = physical_side == "back"
+    rotation = [180.0, 0.0, 0.0] if enabled else [0.0, 0.0, 0.0]
+    return {
+        "enabled": bool(enabled),
+        "mode": "normal_tabletop_keep_camera",
+        "camera_moved_for_defect_side": False if enabled else None,
+        "camera_side": "front" if enabled else physical_side,
+        "physical_anchor_side": physical_side,
+        "rotation_degrees_xyz": rotation,
+        "translation_xyz": [0.0, 0.0, 0.0],
+        "pivot_policy": "product_bbox_center",
+        "environment_transform": "none",
+        "default_backside_operation": bool(enabled),
+    }
+
+
 def apply_object_view_transform(product, defect, transform):
     rotation_deg = transform.get("rotation_degrees_xyz") or [0.0, 0.0, 0.0]
     translation = Vector(transform.get("translation_xyz") or [0.0, 0.0, 0.0])
@@ -1066,9 +1407,10 @@ def apply_object_view_transform(product, defect, transform):
     rotation = Matrix.Rotation(math.radians(rotation_deg[0]), 4, "X") @ rotation
     matrix = Matrix.Translation(pivot + translation) @ rotation @ Matrix.Translation(-pivot)
     objects = [product]
-    for obj in defect_mesh_objects(defect):
-        if obj not in objects:
-            objects.append(obj)
+    if defect is not None and not isinstance(defect, dict):
+        for obj in defect_mesh_objects(defect):
+            if obj not in objects:
+                objects.append(obj)
     for obj in objects:
         obj.matrix_world = matrix @ obj.matrix_world
     transform["pivot_world"] = [float(pivot.x), float(pivot.y), float(pivot.z)]
@@ -1120,6 +1462,24 @@ def tune_qc71336_gray_reference_lighting():
     bpy.context.view_layer.update()
 
 
+def tune_p101040_reference_lighting():
+    scene = bpy.context.scene
+    for obj in bpy.data.objects:
+        if obj.type != "LIGHT":
+            continue
+        if getattr(obj.data, "color", None) is not None:
+            obj.data.color = (0.92, 0.97, 1.0)
+        if hasattr(obj.data, "energy") and "generic_p101040_reference_base_energy" not in obj.data:
+            obj.data["generic_p101040_reference_base_energy"] = float(obj.data.energy) * 0.72
+        if hasattr(obj.data, "energy"):
+            obj.data.energy = float(obj.data["generic_p101040_reference_base_energy"])
+    bg = find_background_node(scene.world)
+    if bg is not None:
+        bg.inputs["Color"].default_value = (0.93, 0.96, 1.0, 1.0)
+        bg.inputs["Strength"].default_value = min(float(bg.inputs["Strength"].default_value), 0.24)
+    bpy.context.view_layer.update()
+
+
 def tune_qc71336_white_generic_lighting():
     scene = bpy.context.scene
     for obj in bpy.data.objects:
@@ -1141,7 +1501,8 @@ def tune_qc71336_white_generic_lighting():
     bpy.context.view_layer.update()
 
 
-def randomize_existing_lights(lights, target=""):
+def randomize_existing_lights(lights, target="", rng=None, energy_jitter=0.20):
+    rng = rng or random
     if is_qc71336_black_target(target):
         energy_multiplier = 1.18
     elif is_qc71336_white_target(target):
@@ -1157,46 +1518,160 @@ def randomize_existing_lights(lights, target=""):
             if "generic_base_energy" not in light.data:
                 light.data["generic_base_energy"] = float(light.data.energy)
             base_energy = float(light.data["generic_base_energy"])
-            light.data.energy = base_energy * energy_multiplier * random.uniform(0.8, 1.2)
+            energy_min = max(0.0, 1.0 - float(energy_jitter))
+            energy_max = 1.0 + float(energy_jitter)
+            light.data.energy = base_energy * energy_multiplier * rng.uniform(energy_min, energy_max)
         jitter = 3.0 if is_qc71336_gray_target(target) else 8.0
-        light.rotation_euler.rotate_axis("X", math.radians(random.uniform(-jitter, jitter)))
-        light.rotation_euler.rotate_axis("Y", math.radians(random.uniform(-jitter, jitter)))
+        light.rotation_euler.rotate_axis("X", math.radians(rng.uniform(-jitter, jitter)))
+        light.rotation_euler.rotate_axis("Y", math.radians(rng.uniform(-jitter, jitter)))
         if is_qc71336_gray_target(target):
-            light.rotation_euler.rotate_axis("Z", math.radians(random.uniform(-3.0, 3.0)))
+            light.rotation_euler.rotate_axis("Z", math.radians(rng.uniform(-3.0, 3.0)))
     if is_qc71336_gray_target(target):
-        bpy.context.scene.view_settings.exposure = -0.96 + random.uniform(-0.10, 0.10)
+        bpy.context.scene.view_settings.exposure = -0.96 + rng.uniform(-0.10, 0.10)
 
 
-def configure_world_background(target=""):
+def configure_world_background(target="", rng=None, domain_randomization=False):
+    rng = rng or random
     world = bpy.context.scene.world or bpy.data.worlds.new("World")
     bpy.context.scene.world = world
     world.use_nodes = True
     background = world.node_tree.nodes.get("Background")
+    result = {"world": world.name, "has_background_node": background is not None}
     if background is not None:
         if is_qc71336_gray_target(target):
-            background.inputs["Color"].default_value = (0.705, 0.697, 0.686, 1.0)
-            background.inputs["Strength"].default_value = 0.014 * random.uniform(0.82, 1.18)
-            world.color = (0.705, 0.697, 0.686)
+            color = jitter_rgb((0.705, 0.697, 0.686), rng, amount=0.010 if domain_randomization else 0.0)
+            strength = 0.014 * rng.uniform(0.82, 1.18)
         elif is_qc7_5244_black_target(target):
-            background.inputs["Color"].default_value = (0.72, 0.72, 0.72, 1.0)
-            background.inputs["Strength"].default_value = 1.08
-            world.color = (0.72, 0.72, 0.72)
+            color = jitter_rgb((0.72, 0.72, 0.72), rng, amount=0.018 if domain_randomization else 0.0)
+            strength = 1.08 * (rng.uniform(0.88, 1.14) if domain_randomization else 1.0)
         elif is_qc71336_black_target(target):
-            background.inputs["Color"].default_value = (0.76, 0.76, 0.76, 1.0)
-            background.inputs["Strength"].default_value = 0.95
-            world.color = (0.76, 0.76, 0.76)
+            color = jitter_rgb((0.76, 0.76, 0.76), rng, amount=0.018 if domain_randomization else 0.0)
+            strength = 0.95 * (rng.uniform(0.88, 1.14) if domain_randomization else 1.0)
         elif is_qc71336_white_target(target):
-            background.inputs["Color"].default_value = (0.70, 0.70, 0.70, 1.0)
-            background.inputs["Strength"].default_value = 0.18
-            world.color = (0.70, 0.70, 0.70)
-        elif is_qc7_5244_white_target(target) or is_ql3_target(target):
-            background.inputs["Color"].default_value = (0.76, 0.76, 0.76, 1.0)
-            background.inputs["Strength"].default_value = 0.36
-            world.color = (0.76, 0.76, 0.76)
+            color = jitter_rgb((0.70, 0.70, 0.70), rng, amount=0.018 if domain_randomization else 0.0)
+            strength = 0.18 * (rng.uniform(0.86, 1.16) if domain_randomization else 1.0)
+        elif is_qc7_5244_white_target(target):
+            color = jitter_rgb((0.76, 0.76, 0.76), rng, amount=0.020 if domain_randomization else 0.0)
+            strength = 0.36 * (rng.uniform(0.84, 1.18) if domain_randomization else 1.0)
+        elif is_ql3_target(target):
+            color = jitter_rgb((0.66, 0.66, 0.66), rng, amount=0.018 if domain_randomization else 0.0)
+            strength = 0.20 * (rng.uniform(0.84, 1.16) if domain_randomization else 1.0)
         else:
-            background.inputs["Color"].default_value = (0.78, 0.78, 0.78, 1.0)
-            background.inputs["Strength"].default_value = 0.8
-            world.color = (0.78, 0.78, 0.78)
+            color = jitter_rgb((0.78, 0.78, 0.78), rng, amount=0.020 if domain_randomization else 0.0)
+            strength = 0.8 * (rng.uniform(0.86, 1.16) if domain_randomization else 1.0)
+        background.inputs["Color"].default_value = (*color, 1.0)
+        background.inputs["Strength"].default_value = strength
+        world.color = color
+        result.update({"color": [float(value) for value in color], "strength": float(strength)})
+    return result
+
+
+def jitter_rgb(color, rng, amount=0.02):
+    return tuple(max(0.0, min(1.0, float(value) + rng.uniform(-amount, amount))) for value in color)
+
+
+def capture_camera_state(camera):
+    if camera is None:
+        return None
+    return {
+        "name": camera.name,
+        "type": camera.data.type,
+        "location": [float(value) for value in camera.location],
+        "rotation_euler": [float(value) for value in camera.rotation_euler],
+        "lens": float(getattr(camera.data, "lens", 0.0)),
+        "ortho_scale": float(getattr(camera.data, "ortho_scale", 0.0)),
+        "shift_x": float(getattr(camera.data, "shift_x", 0.0)),
+        "shift_y": float(getattr(camera.data, "shift_y", 0.0)),
+    }
+
+
+def capture_lights(lights):
+    records = []
+    for light in lights:
+        record = {
+            "name": light.name,
+            "type": light.data.type,
+            "location": [float(value) for value in light.location],
+            "rotation_euler": [float(value) for value in light.rotation_euler],
+        }
+        if hasattr(light.data, "energy"):
+            record["energy"] = float(light.data.energy)
+        if hasattr(light.data, "size"):
+            record["size"] = float(light.data.size)
+        if hasattr(light.data, "size_y"):
+            record["size_y"] = float(light.data.size_y)
+        records.append(record)
+    return records
+
+
+def capture_world_background():
+    world = bpy.context.scene.world
+    if world is None:
+        return None
+    record = {"world": world.name, "color": [float(value) for value in world.color]}
+    if world.use_nodes:
+        background = world.node_tree.nodes.get("Background")
+        if background is not None:
+            record["node_color"] = [float(value) for value in background.inputs["Color"].default_value]
+            record["strength"] = float(background.inputs["Strength"].default_value)
+    return record
+
+
+def capture_backdrop_state():
+    for name in ("GENERIC_CAMERA_BACKDROP", "GENERIC_REFERENCE_BACKDROP"):
+        obj = bpy.data.objects.get(name)
+        if obj is None:
+            continue
+        return {
+            "name": obj.name,
+            "visible_render": bool(not obj.hide_render),
+            "location": [float(value) for value in obj.location],
+            "rotation_euler": [float(value) for value in obj.rotation_euler],
+            "scale": [float(value) for value in obj.scale],
+            "materials": [mat.name for mat in obj.data.materials if mat is not None] if obj.type == "MESH" else [],
+        }
+    return None
+
+
+def product_camera_visibility(camera, obj, width, height):
+    scene = bpy.context.scene
+    projected = []
+    depths = []
+    for corner in obj.bound_box:
+        co = obj.matrix_world @ Vector(corner)
+        point = world_to_camera_view(scene, camera, co)
+        projected.append((float(point.x), float(point.y)))
+        depths.append(float(point.z))
+    if not projected:
+        return {"projected_area_fraction": 0.0, "visible_area_fraction": 0.0, "center_in_frame": False}
+    xs = [item[0] for item in projected]
+    ys = [item[1] for item in projected]
+    x0, x1 = min(xs), max(xs)
+    y0, y1 = min(ys), max(ys)
+    clipped_x0, clipped_x1 = max(0.0, x0), min(1.0, x1)
+    clipped_y0, clipped_y1 = max(0.0, y0), min(1.0, y1)
+    projected_area = max(0.0, x1 - x0) * max(0.0, y1 - y0)
+    visible_area = max(0.0, clipped_x1 - clipped_x0) * max(0.0, clipped_y1 - clipped_y0)
+    center = world_to_camera_view(scene, camera, sum((obj.matrix_world @ Vector(corner) for corner in obj.bound_box), Vector()) / 8.0)
+    return {
+        "projected_area_fraction": float(projected_area),
+        "visible_area_fraction": float(visible_area),
+        "center_in_frame": bool(0.0 <= center.x <= 1.0 and 0.0 <= center.y <= 1.0 and center.z > 0.0),
+        "depth_min": float(min(depths)),
+        "depth_max": float(max(depths)),
+        "bbox_normalized": [float(x0), float(y0), float(x1), float(y1)],
+    }
+
+
+def normal_visibility_ok(visibility, target):
+    visible_area = float(visibility.get("visible_area_fraction", 0.0))
+    center_in_frame = bool(visibility.get("center_in_frame", False))
+    depth_ok = float(visibility.get("depth_max", -1.0)) > 0.0
+    if is_p101040_target(target):
+        return depth_ok and center_in_frame and visible_area >= 0.32
+    if is_ql3_target(target):
+        return depth_ok and visible_area >= 0.16
+    return depth_ok and visible_area >= 0.12
 
 
 def add_area_light(name, location, energy, size):
@@ -2391,6 +2866,10 @@ def main_plane_frame(min_v, max_v):
 
 def is_ql3_target(target):
     return "ql3" in str(target).lower()
+
+
+def is_p101040_target(target):
+    return "p101040" in str(target).lower()
 
 
 def is_qc71336_white_target(target):

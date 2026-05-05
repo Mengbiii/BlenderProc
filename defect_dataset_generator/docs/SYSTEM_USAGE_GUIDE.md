@@ -1,6 +1,6 @@
 # Synthetic Defect Dataset Generator Usage Guide
 
-Last updated: 2026-05-04
+Last updated: 2026-05-05
 
 This guide is the current practical usage document for the BlenderProc-based
 plastic-part defect dataset generator. It is written for the next operator or
@@ -103,6 +103,22 @@ Normal samples:
 ```powershell
 D:\Anaconda\envs\defect_eval\python.exe defect_dataset_generator\app.py generate-target-normal --target <target> --count <count> --out <output_dir> --samples <samples> --seed <seed> --anchor-sides <front|back|side>
 ```
+
+Current normal rendering behavior:
+
+- P101040 normal samples route through the reference black-dot scene with
+  normal mode enabled, so the camera, lighting, and tabletop background match
+  the accepted P101040 black-dot style while defect creation is skipped.
+- Other normal samples route through the generic main-plane renderer with the
+  same tabletop-style background policy.
+- For back-side normal samples, the product object is flipped by 180 degrees and
+  the camera remains in the front tabletop style. Do not interpret normal back
+  as a camera orbit behind the product.
+- Domain randomization remains active for normal samples: lighting, camera
+  jitter, and neutral background variation are sampled per image.
+- Normal labels are empty and normal masks are all black by design.
+- Generated normal outputs belong under `defect_dataset_generator\outputs\` and
+  should not be committed to Git.
 
 Add `--dry-run` to any command when only the generation plan should be checked.
 

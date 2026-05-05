@@ -1,12 +1,26 @@
 # Black Dot Single-Defect 3k-5k Generation Handoff
 
-Last updated: 2026-05-04
+Last updated: 2026-05-05
 
 This handoff is for the next maintenance session. Scope is **single-defect black-dot generation only**. Do not include any same-scene multi-defect/cooccurrence combinations in this pass.
 
 ## Goal
 
 Generate the black-dot single-defect portion of the final 3k-5k synthetic dataset according to the current rehearsal-plan ratios, using GPU rendering, front/back 1:1 side balance, domain randomization enabled, and manual RGB/mask confirmation that every accepted sample truly contains a visible black dot.
+
+## 2026-05-05 Dataset Assembly Note
+
+The accepted black-dot single-defect outputs have already been included in the
+current assembled dataset. The latest final dataset root is:
+
+```text
+defect_dataset_generator/outputs/dataset/final_3k_5k_dataset_20260504
+```
+
+Current assembled manifest count is `3472`: `2772` defect rows and `700`
+regenerated normal rows. Do not regenerate or replace black-dot rows unless a
+new visual failure is found. Generated RGB/mask/label/metadata files remain
+local output artifacts and should not be committed to Git.
 
 ## Source Ratio
 
