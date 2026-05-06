@@ -63,6 +63,7 @@ TEXT = {
         "no_combo": "No approved cooccurrence combo for this target",
         "side": "Side",
         "count": "Count",
+        "defect_count_max": "Max Defects",
         "samples": "Samples",
         "seed": "Seed",
         "output": "Output Folder",
@@ -177,6 +178,7 @@ class DefectGenerationUI:
         self.mode_var = tk.StringVar(value="single")
         self.side_var = tk.StringVar(value="front")
         self.count_var = tk.IntVar(value=1)
+        self.defect_count_max_var = tk.IntVar(value=1)
         self.samples_var = tk.IntVar(value=16)
         self.seed_var = tk.IntVar(value=90001)
         self.dry_run_var = tk.BooleanVar(value=True)
@@ -284,12 +286,13 @@ class DefectGenerationUI:
 
         numeric = ttk.Frame(parent)
         numeric.grid(row=12, column=0, sticky="ew", pady=(2, 8))
-        for col in range(3):
+        for col in range(4):
             numeric.columnconfigure(col, weight=1)
         self.spinbox_labels = {}
         self.add_spinbox(numeric, "count", self.count_var, 1, 10000, 0)
-        self.add_spinbox(numeric, "samples", self.samples_var, 1, 512, 1)
-        self.add_spinbox(numeric, "seed", self.seed_var, 0, 9999999, 2)
+        self.add_spinbox(numeric, "defect_count_max", self.defect_count_max_var, 1, 10, 1)
+        self.add_spinbox(numeric, "samples", self.samples_var, 1, 512, 2)
+        self.add_spinbox(numeric, "seed", self.seed_var, 0, 9999999, 3)
 
         self.output_label = ttk.Label(parent, text=self.tr("output"))
         self.output_label.grid(row=13, column=0, sticky="w")
@@ -622,13 +625,14 @@ class DefectGenerationUI:
             return self.blackdot_parameter_specs(target)
         if target == "qc71336_white" and defect == "foreign_material":
             return [
+                self.param_spec("defect_count_max", "max count", 1, 1, 10),
                 self.param_spec("foreign_material_radius_scale", "radius scale", 0.0, 0.0, 0.05),
                 self.param_spec("foreign_material_depth_scale", "depth scale", 0.0, 0.0, 0.2),
             ]
         if target == "qc71336_black" and defect in {"foreign_material", "splay"}:
-            return []
+            return [self.param_spec("defect_count_max", "max count", 1, 1, 10)]
         if target == "qc7_5244_white" and defect == "mixed_color_contamination":
-            return []
+            return [self.param_spec("defect_count_max", "max count", 1, 1, 10)]
         return self.generic_parameter_specs(defect)
 
     def blackdot_reference_targets(self):
@@ -646,6 +650,7 @@ class DefectGenerationUI:
             .get("backend_parameters", {})
         )
         return [
+            self.param_spec("black_dot_max_count", "max count", 1, 1, 10),
             self.param_spec("black_dot_radius_min_scale", "radius min scale", params.get("black_dot_radius_min_scale", 0.001), 0.0001, 0.05),
             self.param_spec("black_dot_radius_max_scale", "radius max scale", params.get("black_dot_radius_max_scale", 0.003), 0.0001, 0.05),
             self.param_spec("black_dot_depth_min_scale", "depth min scale", params.get("black_dot_depth_min_scale", 0.002), 0.0001, 0.2),
@@ -656,6 +661,7 @@ class DefectGenerationUI:
         defaults = self.generation_defaults.get("defect_defaults", {}).get(defect, {})
         size_range = defaults.get("size_factor_range", [0.012, 0.035])
         specs = [
+            self.param_spec("defect_count_max", "max count", 1, 1, 10),
             self.param_spec("size_factor_min", "size factor min", size_range[0], 0.0001, 0.2),
             self.param_spec("size_factor_max", "size factor max", size_range[1], 0.0001, 0.2),
             self.param_spec("size_scale", "size scale", defaults.get("size_scale", 1.0), 0.1, 5.0),
@@ -756,6 +762,8 @@ class DefectGenerationUI:
             "--anchor-sides",
             side,
         ]
+        if mode == "single":
+            command += ["--defect-count-max", str(int(self.defect_count_max_var.get()))]
         if self.dry_run_var.get():
             command.append("--dry-run")
         params_payload = self.collect_defect_params()

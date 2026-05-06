@@ -215,6 +215,8 @@ def cmd_plan_defects(args: argparse.Namespace) -> int:
 
 
 def cmd_generate_target(args: argparse.Namespace) -> int:
+    if args.defect_count_max < 1:
+        raise ValueError("--defect-count-max must be >= 1")
     target_profile = get_model_color_profile(args.target)
     requested_defects = [item.strip() for item in args.defects.split(",") if item.strip()]
     if not requested_defects:
@@ -252,6 +254,7 @@ def cmd_generate_target(args: argparse.Namespace) -> int:
             object_rotate_deg=args.object_rotate_deg,
             object_translate=args.object_translate,
             defect_parameter_overrides=defect_parameter_overrides.get(defect_type, {}),
+            defect_count_max=args.defect_count_max,
             dry_run=args.dry_run,
         )
         plans.append(plan)
@@ -263,6 +266,7 @@ def cmd_generate_target(args: argparse.Namespace) -> int:
         "target_profile": target_profile,
         "requested_defects": requested_defects,
         "defect_parameter_overrides": defect_parameter_overrides,
+        "defect_count_max": args.defect_count_max,
         "count_per_defect": args.count,
         "output_dir": str(out_dir),
         "quality_goal": "coverage_first_not_visual_realism",
@@ -453,10 +457,12 @@ def _run_target_defect_backend(
     object_rotate_deg,
     object_translate,
     defect_parameter_overrides,
+    defect_count_max,
     dry_run,
 ):
     target_id = target_profile["target_id"]
     backend_name = _target_defect_backend_name(target_profile, defect_type)
+    effective_defect_count_max = _effective_defect_count_max(defect_count_max, defect_parameter_overrides)
     if defect_type == "black_dot":
         backend_model = _blackdot_backend_model(target_id)
         if backend_model is not None:
@@ -481,6 +487,7 @@ def _run_target_defect_backend(
                 object_transform_camera_side=object_transform_camera_side,
                 object_rotate_deg=object_rotate_deg,
                 object_translate=object_translate,
+                defect_count_max=effective_defect_count_max,
                 dry_run=dry_run,
             )
     if backend_name == "qc71336_black_reference":
@@ -499,6 +506,7 @@ def _run_target_defect_backend(
             object_rotate_deg=object_rotate_deg,
             object_translate=object_translate,
             defect_parameter_overrides=defect_parameter_overrides,
+            defect_count_max=effective_defect_count_max,
             dry_run=dry_run,
         )
     if backend_name == "qc71336_white_foreign_reference":
@@ -516,6 +524,7 @@ def _run_target_defect_backend(
             object_rotate_deg=object_rotate_deg,
             object_translate=object_translate,
             defect_parameter_overrides=defect_parameter_overrides,
+            defect_count_max=effective_defect_count_max,
             dry_run=dry_run,
         )
     if backend_name == "qc75244_mixed_color_reference":
@@ -532,6 +541,7 @@ def _run_target_defect_backend(
             object_transform_camera_side=object_transform_camera_side,
             object_rotate_deg=object_rotate_deg,
             object_translate=object_translate,
+            defect_count_max=effective_defect_count_max,
             dry_run=dry_run,
         )
     return run_generic_main_plane_backend(
@@ -549,8 +559,15 @@ def _run_target_defect_backend(
         object_rotate_deg=object_rotate_deg,
         object_translate=object_translate,
         defect_parameter_overrides=defect_parameter_overrides,
+        defect_count_max=effective_defect_count_max,
         dry_run=dry_run,
     )
+
+
+def _effective_defect_count_max(cli_value, defect_parameter_overrides):
+    overrides = defect_parameter_overrides or {}
+    value = overrides.get("defect_count_max", overrides.get("black_dot_max_count", cli_value))
+    return max(1, int(round(float(value))))
 
 
 def _cooccurrence_backend_equivalence(target_profile, defect_types):
@@ -787,6 +804,12 @@ def build_parser() -> argparse.ArgumentParser:
     target_generate_parser.add_argument("--out", required=True, help="Output dataset directory.")
     target_generate_parser.add_argument("--samples", type=int, default=32, help="Cycles samples for first-pass renders.")
     target_generate_parser.add_argument("--seed", type=int, default=100, help="Base seed for generation.")
+    target_generate_parser.add_argument(
+        "--defect-count-max",
+        type=int,
+        default=1,
+        help="For supported same-type defects, sample 1..N defect instances per image.",
+    )
     target_generate_parser.add_argument("--dry-run", action="store_true", help="Write plans without running BlenderProc.")
     target_generate_parser.add_argument(
         "--defect-params-json",

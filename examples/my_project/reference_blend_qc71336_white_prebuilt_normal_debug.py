@@ -47,6 +47,7 @@ def parse_args():
     parser.add_argument("--foreign_material_seed", type=int, default=23)
     parser.add_argument("--foreign_material_radius_scale", type=float, default=0.0)
     parser.add_argument("--foreign_material_depth_scale", type=float, default=0.0)
+    parser.add_argument("--defect_count_max", type=int, default=1)
     parser.add_argument("--anchor_sides", nargs="+", choices=["front", "back"], default=["front"])
     parser.add_argument("--object_transform_mode", choices=["none", "keep_camera"], default="none")
     parser.add_argument("--object_transform_camera_side", choices=["front", "back"], default="front")
@@ -1095,6 +1096,16 @@ def apply_object_view_transform(objects, defect_info, transform):
         obj = bpy.data.objects.get(name) if name else None
         if obj is not None and obj not in transform_objects:
             transform_objects.append(obj)
+    for name in defect_info.get("mask_objects") or []:
+        obj = bpy.data.objects.get(name) if name else None
+        if obj is not None and obj not in transform_objects:
+            transform_objects.append(obj)
+    for child_defect in defect_info.get("defects") or []:
+        for key in ("dot_object", "patch_object", "foreign_object", "mask_object"):
+            name = child_defect.get(key)
+            obj = bpy.data.objects.get(name) if name else None
+            if obj is not None and obj not in transform_objects:
+                transform_objects.append(obj)
     for obj in transform_objects:
         obj.matrix_world = matrix @ obj.matrix_world
     if defect_info.get("world_point"):
@@ -1422,8 +1433,20 @@ def add_black_dot(imported_objects, scene, camera, camera_presets, image_offset,
     }
 
 
-def add_foreign_material(imported_objects, scene, camera, camera_presets, image_offset, seed, radius_scale, depth_scale, allowed_sides=None):
-    clear_reference_black_dot_objects()
+def add_foreign_material(
+    imported_objects,
+    scene,
+    camera,
+    camera_presets,
+    image_offset,
+    seed,
+    radius_scale,
+    depth_scale,
+    allowed_sides=None,
+    clear_existing=True,
+):
+    if clear_existing:
+        clear_reference_black_dot_objects()
     rng = random.Random(seed + image_offset)
     anchor = sample_black_dot_anchor(
         imported_objects,
@@ -1539,6 +1562,54 @@ def add_foreign_material(imported_objects, scene, camera, camera_presets, image_
         "material_version": FOREIGN_MATERIAL_VERSION,
         "center_tracking": anchor["anchor_band"] == "back_face",
         "seed": mesh_seed,
+    }
+
+
+def add_same_type_foreign_materials(
+    imported_objects,
+    scene,
+    camera,
+    camera_presets,
+    image_offset,
+    seed,
+    radius_scale,
+    depth_scale,
+    allowed_sides,
+    max_count,
+):
+    defect_count = random.Random(seed + image_offset).randint(1, max(1, int(max_count)))
+    clear_reference_black_dot_objects()
+    defects = []
+    for instance_index in range(defect_count):
+        defect = add_foreign_material(
+            imported_objects,
+            scene,
+            camera,
+            camera_presets,
+            image_offset + instance_index * 10000,
+            seed + instance_index * 100000,
+            radius_scale,
+            depth_scale,
+            allowed_sides,
+            clear_existing=False,
+        )
+        defect["instance_index"] = instance_index
+        defects.append(defect)
+    points = [Vector(item["world_point"]) for item in defects if item.get("world_point")]
+    center = sum(points, Vector((0.0, 0.0, 0.0))) / max(1, len(points)) if points else None
+    return {
+        "defect_type": "foreign_material",
+        "defect_type_internal": "foreign_material",
+        "defect_type_canonical": "foreign_material",
+        "defect_types": ["foreign_material" for _ in defects],
+        "defect_count": len(defects),
+        "defect_count_max": int(max_count),
+        "defects": defects,
+        "mask_objects": [item["dot_object"] for item in defects if item.get("dot_object")],
+        "dot_object": defects[0].get("dot_object") if defects else None,
+        "anchor_side": defects[0].get("anchor_side", "front") if defects else "front",
+        "world_point": [float(center.x), float(center.y), float(center.z)] if center else None,
+        "generation_mode": "same_type_multi_defect",
     }
 
 
@@ -1836,18 +1907,20 @@ def make_emission_mask_material(name="REFERENCE_BLACK_DOT_MASK_MAT"):
     return mat
 
 
-def render_black_dot_binary_mask(mask_path, dot_object_name):
+def render_objects_binary_mask(mask_path, object_names):
     scene = bpy.context.scene
-    dot = bpy.data.objects.get(dot_object_name)
-    if dot is None:
-        raise RuntimeError(f"Black-dot object not found for mask render: {dot_object_name}")
+    object_names = list(object_names)
+    targets = [bpy.data.objects.get(name) for name in object_names]
+    if any(obj is None for obj in targets):
+        missing = [name for name, obj in zip(object_names, targets) if obj is None]
+        raise RuntimeError(f"Defect object not found for mask render: {missing}")
 
     original_engine = scene.render.engine
     original_samples = int(getattr(scene.cycles, "samples", 1))
     original_adaptive = bool(getattr(scene.cycles, "use_adaptive_sampling", False))
     original_filepath = scene.render.filepath
     original_hide_render = {obj.name: bool(obj.hide_render) for obj in bpy.data.objects}
-    original_dot_materials = [mat for mat in dot.data.materials]
+    original_target_materials = {obj.name: [mat for mat in obj.data.materials] for obj in targets}
     world = scene.world
     background = find_background_node(world)
     original_bg_color = None
@@ -1861,10 +1934,11 @@ def render_black_dot_binary_mask(mask_path, dot_object_name):
     try:
         for obj in bpy.data.objects:
             if obj.type == "MESH":
-                obj.hide_render = obj.name != dot_object_name
-        dot.hide_render = False
-        dot.data.materials.clear()
-        dot.data.materials.append(mask_mat)
+                obj.hide_render = obj.name not in object_names
+        for obj in targets:
+            obj.hide_render = False
+            obj.data.materials.clear()
+            obj.data.materials.append(mask_mat)
         if background is not None:
             background.inputs["Color"].default_value = (0.0, 0.0, 0.0, 1.0)
             background.inputs["Strength"].default_value = 1.0
@@ -1880,13 +1954,18 @@ def render_black_dot_binary_mask(mask_path, dot_object_name):
         if background is not None and original_bg_color is not None and original_bg_strength is not None:
             background.inputs["Color"].default_value = original_bg_color
             background.inputs["Strength"].default_value = original_bg_strength
-        dot.data.materials.clear()
-        for mat in original_dot_materials:
-            dot.data.materials.append(mat)
+        for obj in targets:
+            obj.data.materials.clear()
+            for mat in original_target_materials.get(obj.name, []):
+                obj.data.materials.append(mat)
         for obj in bpy.data.objects:
             if obj.name in original_hide_render:
                 obj.hide_render = original_hide_render[obj.name]
         bpy.context.view_layer.update()
+
+
+def render_black_dot_binary_mask(mask_path, dot_object_name):
+    render_objects_binary_mask(mask_path, [dot_object_name])
 
 
 def load_binary_mask_from_image(mask_path, threshold=0.5):
@@ -2067,17 +2146,32 @@ def main():
             )
         elif args.enable_foreign_material:
             defect_type = "foreign_material"
-            defect_info = add_foreign_material(
-                imported,
-                bpy.context.scene,
-                camera,
-                camera_presets,
-                image_offset,
-                args.foreign_material_seed,
-                args.foreign_material_radius_scale,
-                args.foreign_material_depth_scale,
-                args.anchor_sides,
-            )
+            defect_count_max = max(1, int(args.defect_count_max or 1))
+            if defect_count_max > 1:
+                defect_info = add_same_type_foreign_materials(
+                    imported,
+                    bpy.context.scene,
+                    camera,
+                    camera_presets,
+                    image_offset,
+                    args.foreign_material_seed,
+                    args.foreign_material_radius_scale,
+                    args.foreign_material_depth_scale,
+                    args.anchor_sides,
+                    defect_count_max,
+                )
+            else:
+                defect_info = add_foreign_material(
+                    imported,
+                    bpy.context.scene,
+                    camera,
+                    camera_presets,
+                    image_offset,
+                    args.foreign_material_seed,
+                    args.foreign_material_radius_scale,
+                    args.foreign_material_depth_scale,
+                    args.anchor_sides,
+                )
         if defect_info is not None:
             view_transform = build_object_view_transform(args, defect_info)
             if view_transform["enabled"]:
@@ -2115,7 +2209,8 @@ def main():
             mask_path = mask_dir / f"{image_index:06d}.png"
             overlay_path = overlay_dir / f"{image_index:06d}.png"
             label_path = yolo_dir / f"{image_index:06d}.txt"
-            render_black_dot_binary_mask(mask_path, defect_info["dot_object"])
+            mask_objects = defect_info.get("mask_objects") or [defect_info["dot_object"]]
+            render_objects_binary_mask(mask_path, mask_objects)
             binary, mask_width, mask_height = load_binary_mask_from_image(mask_path, threshold=0.5)
             bbox = bbox_from_binary_mask(binary, mask_width, mask_height)
             save_mask_overlay(
@@ -2128,15 +2223,43 @@ def main():
                 "REFERENCE_DEFECT_OVERLAY_EXPORT",
             )
             label_text = ""
-            if bbox is not None and bbox["xywh"][2] > 0 and bbox["xywh"][3] > 0:
+            defect_bboxes = []
+            if defect_info.get("defects"):
+                class_id = 1 if defect_type == "foreign_material" else 0
+                for item in defect_info.get("defects", []):
+                    object_name = item.get("dot_object")
+                    if not object_name:
+                        continue
+                    tmp_mask_path = mask_dir / f"{image_index:06d}_{defect_type}_{item.get('instance_index', 0):02d}_tmp.png"
+                    render_objects_binary_mask(tmp_mask_path, [object_name])
+                    tmp_binary, tmp_width, tmp_height = load_binary_mask_from_image(tmp_mask_path, threshold=0.5)
+                    tmp_bbox = bbox_from_binary_mask(tmp_binary, tmp_width, tmp_height)
+                    if tmp_bbox is not None and tmp_bbox["xywh"][2] > 0 and tmp_bbox["xywh"][3] > 0:
+                        yolo_bbox = bbox_to_yolo(bpy.context.scene, tmp_bbox)
+                        label_text += (
+                            f"{class_id} {yolo_bbox[0]:.6f} {yolo_bbox[1]:.6f} "
+                            f"{yolo_bbox[2]:.6f} {yolo_bbox[3]:.6f}\n"
+                        )
+                        defect_bboxes.append(
+                            {
+                                "defect_type": defect_type,
+                                "class_id": class_id,
+                                "bbox": tmp_bbox,
+                                "instance_index": item.get("instance_index"),
+                            }
+                        )
+                    tmp_mask_path.unlink(missing_ok=True)
+            elif bbox is not None and bbox["xywh"][2] > 0 and bbox["xywh"][3] > 0:
                 yolo_bbox = bbox_to_yolo(bpy.context.scene, bbox)
-                label_text = f"0 {yolo_bbox[0]:.6f} {yolo_bbox[1]:.6f} {yolo_bbox[2]:.6f} {yolo_bbox[3]:.6f}\n"
+                class_id = 1 if defect_type == "foreign_material" else 0
+                label_text = f"{class_id} {yolo_bbox[0]:.6f} {yolo_bbox[1]:.6f} {yolo_bbox[2]:.6f} {yolo_bbox[3]:.6f}\n"
             label_path.write_text(label_text, encoding="utf-8")
             label_info = {
                 "mask": str(mask_path.relative_to(output_dir)),
                 "overlay": str(overlay_path.relative_to(output_dir)),
                 "label_yolo": str(label_path.relative_to(output_dir)),
                 "bbox": bbox,
+                "defect_bboxes": defect_bboxes,
                 "mask_width": mask_width,
                 "mask_height": mask_height,
             }
@@ -2213,6 +2336,7 @@ def main():
         "cycles_samples": args.samples,
         "enable_black_dot": args.enable_black_dot,
         "enable_foreign_material": args.enable_foreign_material,
+        "defect_count_max": max(1, int(args.defect_count_max or 1)),
         "gpu_info": gpu_info,
         "lighting": capture_light_summary(),
         "white_real_domain_material_tuning": white_real_domain_material_tuning,

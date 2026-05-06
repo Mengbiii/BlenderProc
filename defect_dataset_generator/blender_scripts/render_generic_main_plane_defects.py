@@ -52,6 +52,7 @@ def parse_args():
     parser.add_argument("--cooccurrence_iou_threshold", type=float, default=0.15)
     parser.add_argument("--cooccurrence_min_center_distance_px", type=float, default=0.0)
     parser.add_argument("--cooccurrence_max_attempts_per_defect", type=int, default=24)
+    parser.add_argument("--defect_count_max", type=int, default=1)
     parser.add_argument("--normal_mode", action="store_true", help="Render normal/no-defect samples with empty masks and labels.")
     parser.add_argument("--anchor_sides", nargs="+", choices=["front", "back", "side"], default=["front", "back"])
     parser.add_argument("--force_generic_camera", action="store_true")
@@ -130,6 +131,10 @@ def main():
 
     if args.cooccurrence_defects:
         run_cooccurrence_generation(args, defaults, output_dir, product, camera, scene_profile, render_device_info)
+        return
+
+    if int(args.defect_count_max or 1) > 1:
+        run_same_type_multi_generation(args, defaults, output_dir, product, camera, scene_profile, render_device_info)
         return
 
     samples = []
@@ -429,6 +434,135 @@ def run_cooccurrence_generation(args, defaults, output_dir, product, camera, sce
             "merged_mask": True,
             "class_masks": bool(args.render_class_masks),
             "class_masks_default": False,
+        },
+        "defaults_registry": str(DEFAULTS_PATH),
+    }
+    (output_dir / "metadata.json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def run_same_type_multi_generation(args, defaults, output_dir, product, camera, scene_profile, render_device_info):
+    rgb_dir = mkdir(output_dir / "rgb")
+    mask_dir = mkdir(output_dir / "mask")
+    mask_alias_dir = mkdir(output_dir / "masks")
+    mask_by_class_dir = mkdir(output_dir / "masks_by_class") if args.render_class_masks else None
+    label_dir = mkdir(output_dir / "labels_yolo")
+    sample_metadata_dir = mkdir(output_dir / "metadata")
+
+    product_initial_matrix = product.matrix_world.copy()
+    samples = []
+    defect_count_max = max(1, int(args.defect_count_max or 1))
+    for local_index in range(args.num):
+        sample_id = args.start_index + local_index
+        rng = random.Random(args.seed + sample_id)
+        product.matrix_world = product_initial_matrix.copy()
+        bpy.context.view_layer.update()
+        cleanup_defects()
+
+        camera_side = cooccurrence_camera_side(args)
+        if not scene_profile["uses_existing_camera"]:
+            position_camera_for_side(camera, product, camera_side, args.target)
+            if args.object_transform_mode == "none":
+                apply_camera_domain_randomization(camera, product, camera_side, args.target, rng)
+        ensure_camera_backdrop(product, camera, args.target)
+        setup_lighting(product, camera, args.target, rng=rng, force_generic_lighting=args.force_generic_lighting)
+
+        defect_count = rng.randint(1, defect_count_max)
+        records = create_cooccurrence_defects(
+            product,
+            args,
+            [args.defect_type] * defect_count,
+            rng,
+            defaults,
+            camera,
+        )
+        view_transform = build_object_view_transform(args, {"anchor_side": camera_side})
+        if view_transform["enabled"]:
+            apply_object_view_transform_to_defects(product, [record["object"] for record in records], view_transform)
+            for record in records:
+                record["bbox"] = bbox_from_object(camera, record["object"], args.width, args.height)
+
+        rgb_path = rgb_dir / f"{sample_id:06d}.png"
+        mask_path = mask_dir / f"{sample_id:06d}.png"
+        mask_alias_path = mask_alias_dir / f"{sample_id:06d}.png"
+        label_path = label_dir / f"{sample_id:06d}.txt"
+        metadata_path = sample_metadata_dir / f"{sample_id:06d}.json"
+
+        render_rgb(rgb_path)
+        render_mask_for_defects(mask_path, [record["object"] for record in records])
+        shutil.copyfile(mask_path, mask_alias_path)
+        for instance_index, record in enumerate(records):
+            record["instance_index"] = instance_index
+            if args.render_class_masks:
+                class_mask_path = mask_by_class_dir / f"{sample_id:06d}_{record['defect_type']}_{instance_index:02d}.png"
+                render_mask_for_defects(class_mask_path, [record["object"]])
+                record["mask_by_class"] = str(class_mask_path.relative_to(output_dir))
+
+        write_yolo_labels(label_path, records, args.width, args.height)
+        sample_defects = []
+        for record in records:
+            sample_defects.append(
+                {
+                    "defect_type": record["defect_type"],
+                    "class_id": DEFECT_CLASS_IDS[record["defect_type"]],
+                    "bbox": record["bbox"],
+                    "instance_index": record.get("instance_index"),
+                    "anchor_side": record["object"].get("anchor_side"),
+                    "main_plane_axis": record["object"].get("main_plane_axis"),
+                    "placement_policy": record["object"].get("placement_policy"),
+                    "mask_by_class": record.get("mask_by_class"),
+                    "placement_warning": record.get("placement_warning"),
+                }
+            )
+        sample_record = {
+            "image_id": sample_id,
+            "rgb": str(rgb_path.relative_to(output_dir)),
+            "mask": str(mask_alias_path.relative_to(output_dir)),
+            "label_yolo": str(label_path.relative_to(output_dir)),
+            "metadata": str(metadata_path.relative_to(output_dir)),
+            "defects": sample_defects,
+            "defect_types": [record["defect_type"] for record in records],
+            "defect_type": args.defect_type,
+            "defect_count": len(records),
+            "defect_count_max": defect_count_max,
+            "anchor_side": camera_side,
+            "view_transform": view_transform,
+            "generic_backend": True,
+            "generation_mode": "same_type_multi_defect",
+            "quality_goal": "same_type_multi_defect_coverage_first",
+            "seed": args.seed + sample_id,
+        }
+        metadata_path.write_text(json.dumps(sample_record, indent=2, ensure_ascii=False), encoding="utf-8")
+        samples.append(sample_record)
+
+    product.matrix_world = product_initial_matrix.copy()
+    bpy.context.view_layer.update()
+    metadata = {
+        "schema_version": "generic_main_plane_same_type_multi_defect_v0.1",
+        "script": str(Path(__file__).resolve()),
+        "target": args.target,
+        "defect_type": args.defect_type,
+        "defect_count_max": defect_count_max,
+        "placement_policy": placement_policy_for_target(args.target),
+        "main_plane_axis_policy": main_plane_axis_policy_for_target(args.target),
+        "product_bbox": product_bbox_metadata(product),
+        "scene_profile": scene_profile,
+        "source_paths": {"blend": args.blend, "stl": args.stl, "model_blend": args.model_blend},
+        "render_width": args.width,
+        "render_height": args.height,
+        "cycles_samples": args.samples,
+        "render_device_info": render_device_info,
+        "seed": args.seed,
+        "object_transform_mode": args.object_transform_mode,
+        "cooccurrence_iou_threshold": args.cooccurrence_iou_threshold,
+        "samples": samples,
+        "notes": [
+            "Each RGB image contains a random count of the same defect type.",
+            "masks is the merged binary mask; labels_yolo contains one row per visible instance.",
+        ],
+        "mask_output_policy": {
+            "merged_mask": True,
+            "class_masks": bool(args.render_class_masks),
+            "one_label_row_per_instance": True,
         },
         "defaults_registry": str(DEFAULTS_PATH),
     }

@@ -1,6 +1,6 @@
 # Current Project Handoff
 
-Last updated: 2026-05-05
+Last updated: 2026-05-06
 
 This handoff is for the next maintenance session. The current project is a
 BlenderProc-based synthetic defect dataset generator for plastic workpieces.
@@ -13,7 +13,68 @@ For the newest usage-oriented handoff, also read:
 ```text
 defect_dataset_generator/docs/SYSTEM_USAGE_GUIDE.md
 defect_dataset_generator/docs/NEXT_HANDOFF_2026_05_04.md
+defect_dataset_generator/docs/FINAL_PACKAGE_CONTENTS.md
 ```
+
+## 2026-05-06 Packaging Update
+
+The final packaging scope is now documented in:
+
+```text
+defect_dataset_generator/docs/FINAL_PACKAGE_CONTENTS.md
+```
+
+Package source code, model assets, and the cleaned dataset as separate
+deliverables. The source package should include the generator code,
+configuration, UI, reference backend scripts, and documentation. Model files
+under `assets/models/` should be packaged separately. Generated outputs under
+`defect_dataset_generator/outputs/` should not be included in the source
+package.
+
+The cleaned dataset root is:
+
+```text
+defect_dataset_generator/outputs/dataset/final_3k_5k_dataset_20260504/
+```
+
+The dataset root now contains only `images/`, `masks/`, `labels/`,
+`metadata/`, `manifest.csv`, `dataset_summary.json`, and `README_DATASET.md`.
+Auxiliary reports and quarantined intermediate files were moved to the sibling
+archive directory.
+
+## 2026-05-06 Same-Type Multi-Defect Update
+
+Single-defect production backends now support multiple same-type defects per
+image. Use `generate-target --defect-count-max N` to sample a random instance
+count from `1` to `N` per rendered image. The default remains `1`.
+
+Current supported backend coverage:
+
+- reference black-dot targets;
+- generic main-plane single-defect targets;
+- QC71336 black prebuilt `foreign_material` and `splay`;
+- QC71336 white prebuilt `foreign_material`;
+- QC7-5244 white mixed-color reference backend.
+
+Output policy:
+
+- merged mask contains all visible same-type instances;
+- YOLO label file contains one row per visible instance;
+- metadata records `defect_count` and per-instance bbox/placement fields;
+- default behavior remains a single instance per image because
+  `--defect-count-max` defaults to `1`;
+- the desktop UI now exposes a main `Max Defects` control in single-defect
+  mode and passes it directly as `--defect-count-max`.
+
+QC7-5244 white mixed-color correction:
+
+- The mixed-color multi-defect route must use
+  `reference_blend_qc75244_mixed_color_profile_debug.py`.
+- The invalid smoke output that used a generic rectangular patch fallback
+  should not be used for review:
+  `defect_dataset_generator/outputs/smoke/same_type_batch5_all_combos_20260506/qc7_5244_white_mixed_color/`.
+- The corrected smoke output is:
+  `defect_dataset_generator/outputs/smoke/qc75244_mixed_reference_batch5_visible_fix_20260506/`.
 
 ## 2026-05-05 Normal Dataset Update
 

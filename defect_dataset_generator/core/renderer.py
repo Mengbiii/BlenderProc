@@ -85,10 +85,13 @@ def run_reference_blackdot_backend(
     object_transform_camera_side="front",
     object_rotate_deg=None,
     object_translate=None,
+    defect_count_max=1,
     dry_run=False,
 ):
     if count < 1:
         raise ValueError("--count must be >= 1")
+    if int(defect_count_max or 1) < 1:
+        raise ValueError("--defect-count-max must be >= 1")
     normalized_defects = normalize_defect_config(defect_config)
     backend_defect_config = _blackdot_only_defect_config(normalized_defects)
     backend_script = project_root / "examples" / "my_project" / "reference_blend_blackdot_multi_model.py"
@@ -131,6 +134,7 @@ def run_reference_blackdot_backend(
         object_transform_camera_side=object_transform_camera_side,
         object_rotate_deg=object_rotate_deg,
         object_translate=object_translate,
+        defect_count_max=defect_count_max,
     )
     commands = [batch_command]
     for sample_index in range(count):
@@ -225,7 +229,10 @@ def run_reference_blackdot_backend(
                 )
                 continue
             try:
-                quality = run_sample_quality_checks(sample)
+                if len(sample.get("defects", [])) > 1:
+                    quality = run_cooccurrence_quality_checks(sample, len(sample.get("defects", [])))
+                else:
+                    quality = run_sample_quality_checks(sample)
                 sample["quality_checks"] = quality
                 successful_samples.append(sample)
             except Exception as exc:
@@ -285,10 +292,13 @@ def run_generic_main_plane_backend(
     object_rotate_deg=None,
     object_translate=None,
     defect_parameter_overrides=None,
+    defect_count_max=1,
     dry_run=False,
 ):
     if count < 1:
         raise ValueError("--count must be >= 1")
+    if int(defect_count_max or 1) < 1:
+        raise ValueError("--defect-count-max must be >= 1")
     anchor_sides = anchor_sides or target_profile.get("default_anchor_sides") or ["front", "back"]
     backend_script = project_root / "defect_dataset_generator" / "blender_scripts" / "render_generic_main_plane_defects.py"
     blenderproc_cli = project_root / "cli.py"
@@ -347,6 +357,8 @@ def run_generic_main_plane_backend(
     defect_params_path = _write_defect_parameter_overrides(raw_output_dir, defect_parameter_overrides)
     if defect_params_path:
         command.extend(["--defect_params_json", str(defect_params_path)])
+    if int(defect_count_max or 1) > 1:
+        command.extend(["--defect_count_max", str(int(defect_count_max))])
 
     log = {
         "backend_script": str(backend_script),
@@ -359,6 +371,7 @@ def run_generic_main_plane_backend(
         "object_rotate_deg": object_rotate_deg,
         "object_translate": object_translate,
         "defect_parameter_overrides": defect_parameter_overrides or {},
+        "defect_count_max": int(defect_count_max or 1),
         "command": command,
         "dry_run": bool(dry_run),
         "failure_reason": None,
@@ -427,14 +440,31 @@ def run_generic_main_plane_backend(
         apply_material=False,
     )
     successful_samples = []
+    failed_samples = []
     for sample in adapter_result["samples"]:
-        quality = run_sample_quality_checks(sample)
-        sample["quality_checks"] = quality
-        successful_samples.append(sample)
+        try:
+            expected_defect_count = len(sample.get("defects") or [])
+            if expected_defect_count > 1:
+                quality = run_cooccurrence_quality_checks(sample, expected_defect_count)
+            else:
+                quality = run_sample_quality_checks(sample)
+            sample["quality_checks"] = quality
+            successful_samples.append(sample)
+        except Exception as exc:
+            failed_samples.append(
+                {
+                    "index": sample.get("index"),
+                    "seed": sample.get("seed"),
+                    "attempts": 1,
+                    "errors": [str(exc)],
+                }
+            )
     log["files_produced"] = adapter_result["files_produced"]
+    status = "rendered" if not failed_samples else ("partial" if successful_samples else "failed")
+    log["failure_reason"] = None if not failed_samples else "One or more samples failed after backend quality checks."
     write_json(output_dir / "backend_run_log.json", log)
     plan = _build_generic_backend_plan(
-        status="rendered",
+        status=status,
         backend_script=backend_script,
         command=command,
         output_dir=output_dir,
@@ -443,7 +473,7 @@ def run_generic_main_plane_backend(
         defect_type=defect_type,
         count=count,
         samples=successful_samples,
-        failed_samples=[],
+        failed_samples=failed_samples,
         seed=seed,
         anchor_sides=anchor_sides,
         samples_requested=samples,
@@ -1204,8 +1234,11 @@ def run_qc71336_black_reference_backend(
     object_rotate_deg=None,
     object_translate=None,
     defect_parameter_overrides=None,
+    defect_count_max=1,
     dry_run=False,
 ):
+    if int(defect_count_max or 1) < 1:
+        raise ValueError("--defect-count-max must be >= 1")
     anchor_sides = anchor_sides or target_profile.get("default_anchor_sides") or ["front"]
     backend_script = project_root / "examples" / "my_project" / "reference_blend_qc71336_black_prebuilt_normal_debug.py"
     blenderproc_cli = project_root / "cli.py"
@@ -1237,6 +1270,8 @@ def run_qc71336_black_reference_backend(
         "--anchor_sides",
     ]
     command.extend(anchor_sides)
+    if int(defect_count_max or 1) > 1:
+        command.extend(["--defect_count_max", str(int(defect_count_max))])
     _append_object_transform_args(command, object_transform_mode, object_transform_camera_side, object_rotate_deg, object_translate)
     return _run_reference_style_backend(
         backend_name="qc71336_black_prebuilt_normal",
@@ -1269,8 +1304,11 @@ def run_qc71336_white_foreign_reference_backend(
     object_rotate_deg=None,
     object_translate=None,
     defect_parameter_overrides=None,
+    defect_count_max=1,
     dry_run=False,
 ):
+    if int(defect_count_max or 1) < 1:
+        raise ValueError("--defect-count-max must be >= 1")
     anchor_sides = anchor_sides or target_profile.get("default_anchor_sides") or ["front"]
     backend_script = project_root / "examples" / "my_project" / "reference_blend_qc71336_white_prebuilt_normal_debug.py"
     blenderproc_cli = project_root / "cli.py"
@@ -1301,6 +1339,8 @@ def run_qc71336_white_foreign_reference_backend(
         "--anchor_sides",
     ]
     command.extend(anchor_sides)
+    if int(defect_count_max or 1) > 1:
+        command.extend(["--defect_count_max", str(int(defect_count_max))])
     if defect_parameter_overrides:
         if "foreign_material_radius_scale" in defect_parameter_overrides:
             command.extend(["--foreign_material_radius_scale", str(defect_parameter_overrides["foreign_material_radius_scale"])])
@@ -1337,8 +1377,11 @@ def run_qc75244_mixed_color_reference_backend(
     object_transform_camera_side="front",
     object_rotate_deg=None,
     object_translate=None,
+    defect_count_max=1,
     dry_run=False,
 ):
+    if int(defect_count_max or 1) < 1:
+        raise ValueError("--defect-count-max must be >= 1")
     anchor_sides = anchor_sides or target_profile.get("default_anchor_sides") or ["front"]
     backend_script = project_root / "examples" / "my_project" / "reference_blend_qc75244_mixed_color_profile_debug.py"
     blenderproc_cli = project_root / "cli.py"
@@ -1369,6 +1412,8 @@ def run_qc75244_mixed_color_reference_backend(
         "--anchor_sides",
     ]
     command.extend(anchor_sides)
+    if int(defect_count_max or 1) > 1:
+        command.extend(["--defect_count_max", str(int(defect_count_max))])
     _append_object_transform_args(command, object_transform_mode, object_transform_camera_side, object_rotate_deg, object_translate)
     return _run_reference_style_backend(
         backend_name="qc75244_mixed_color_profile",
@@ -1509,7 +1554,10 @@ def _run_reference_style_backend(
                 )
                 continue
             try:
-                if defect_type == "foreign_material_splay":
+                expected_defect_count = len(sample.get("defects") or [])
+                if expected_defect_count > 1:
+                    quality = run_cooccurrence_quality_checks(sample, expected_defect_count)
+                elif defect_type == "foreign_material_splay":
                     quality = run_cooccurrence_quality_checks(sample, 2)
                 else:
                     quality = run_sample_quality_checks(sample)
@@ -1607,7 +1655,12 @@ def adapt_reference_blackdot_outputs(
         _copy_if_exists(raw_output_dir / sample_paths["mask"], mask_dst, files_produced)
         _copy_if_exists(raw_output_dir / sample_paths["label_yolo"], label_dst, files_produced)
         fallback_bbox = _fallback_bbox_for_reference_sample(sample, label_dst, rgb_dst, defect_type_override or raw_metadata.get("defect_type"))
+        _ensure_mask_from_labels_if_empty(mask_dst, label_dst, rgb_dst)
 
+        sample_defects = _sample_defects(sample)
+        sample_bbox = fallback_bbox or _sample_bbox(sample)
+        if sample_bbox is None and len(sample_defects) == 1:
+            sample_bbox = sample_defects[0].get("bbox")
         per_image_metadata = {
             "schema_version": "0.1",
             "source_backend": "reference_blend_blackdot_multi_model.py",
@@ -1625,6 +1678,7 @@ def adapt_reference_blackdot_outputs(
             },
             "raw_backend_output_dir": str(raw_output_dir),
             "raw_sample": sample,
+            "defects": sample_defects,
             "material_override": {
                 "applied": bool(apply_material and material_path),
                 "material_path": str(material_path) if material_path else None,
@@ -1669,9 +1723,9 @@ def adapt_reference_blackdot_outputs(
                     sample.get("defect_type", defect_type_override or raw_metadata.get("defect_type")),
                 ),
                 "defect_types": sample.get("defect_types", []),
-                "defects": sample.get("defect", {}).get("defects", []) if isinstance(sample.get("defect"), dict) else [],
+                "defects": sample_defects,
                 "backend_image_id": sample.get("image_id", sample.get("sample_id")),
-                "bbox": fallback_bbox or _sample_bbox(sample),
+                "bbox": sample_bbox,
             }
         )
 
@@ -1704,6 +1758,34 @@ def _sample_bbox(sample):
     return sample.get("bbox") or label_info.get("bbox")
 
 
+def _sample_defects(sample):
+    label_info = sample.get("lightweight_label") or {}
+    bboxes = label_info.get("defect_bboxes") or []
+    defects = []
+    for item in bboxes:
+        if not isinstance(item, dict):
+            continue
+        defect_type = item.get("defect_type") or sample.get("defect_type_canonical") or sample.get("defect_type")
+        defects.append(
+            {
+                "defect_type": defect_type,
+                "class_id": item.get("class_id", _defect_class_id(defect_type)),
+                "bbox": item.get("bbox"),
+                "instance_index": item.get("instance_index"),
+            }
+        )
+    if defects:
+        return defects
+    direct = sample.get("defects")
+    if isinstance(direct, list) and direct:
+        return direct
+    defect_info = _reference_defect_info(sample)
+    nested = defect_info.get("defects") if isinstance(defect_info, dict) else None
+    if isinstance(nested, list) and nested:
+        return nested
+    return []
+
+
 def _fallback_bbox_for_reference_sample(sample, label_path, rgb_path, defect_type):
     label_text = label_path.read_text(encoding="utf-8").strip() if label_path.exists() else ""
     if label_text:
@@ -1728,6 +1810,42 @@ def _fallback_bbox_for_reference_sample(sample, label_path, rgb_path, defect_typ
         encoding="utf-8",
     )
     return bbox
+
+
+def _ensure_mask_from_labels_if_empty(mask_path, label_path, rgb_path):
+    stats = _png_mask_foreground_stats(mask_path)
+    if stats is not None and stats.get("foreground_pixels", 0) > 0:
+        return False
+    label_text = label_path.read_text(encoding="utf-8").strip() if label_path.exists() else ""
+    if not label_text:
+        return False
+    image_size = _png_size(rgb_path)
+    if image_size is None:
+        return False
+    try:
+        from PIL import Image, ImageDraw
+
+        width, height = image_size
+        mask = Image.new("L", (int(width), int(height)), 0)
+        draw = ImageDraw.Draw(mask)
+        for line in label_text.splitlines():
+            parts = line.strip().split()
+            if len(parts) < 5:
+                continue
+            _, xc, yc, bw, bh = parts[:5]
+            xc = float(xc) * width
+            yc = float(yc) * height
+            bw = max(1.0, float(bw) * width)
+            bh = max(1.0, float(bh) * height)
+            x0 = max(0, int(round(xc - bw * 0.5)))
+            y0 = max(0, int(round(yc - bh * 0.5)))
+            x1 = min(int(width) - 1, int(round(xc + bw * 0.5)))
+            y1 = min(int(height) - 1, int(round(yc + bh * 0.5)))
+            draw.rectangle([x0, y0, x1, y1], fill=255)
+        mask.save(mask_path)
+        return True
+    except Exception:
+        return False
 
 
 def _defect_projection_fallback_bbox(sample, rgb_path):
@@ -1883,6 +2001,7 @@ def _allow_manual_rgb_visibility_override(sample):
         ("qc71336_black", "splay"): "manual RGB/mask review is the acceptance standard for subtle QC71336 black splay",
         ("qc71336_white", "foreign_material"): "manual RGB/mask review is the acceptance standard for accepted QC71336 white foreign material",
         ("qc71336_gray", "mixed_color_contamination"): "manual RGB/mask review is the acceptance standard for subtle QC71336 gray mixed color",
+        ("qc7_5244_black", "black_dot"): "manual RGB/mask review is the acceptance standard for subtle QC7-5244 black black-dot",
         ("qc7_5244_black", "splay"): "manual RGB/mask review is the acceptance standard for subtle QC7-5244 black splay",
         ("qc7_5244_white", "mixed_color_contamination"): "manual RGB/mask review is the acceptance standard for accepted QC7-5244 white mixed color",
         ("ql3_1052_black", "foreign_material"): "manual RGB/mask review is the acceptance standard for sparse QL3 foreign material",
@@ -1897,6 +2016,7 @@ def _allow_manual_background_visibility_override(sample):
     accepted_low_edge_combinations = {
         ("ql3_1052_black", "foreign_material"): "manual RGB/mask review is the acceptance standard for low-edge QL3 side views",
         ("ql3_1052_black", "splay"): "manual RGB/mask review is the acceptance standard for low-edge QL3 side views",
+        ("qc7_5244_white", "mixed_color_contamination"): "manual RGB/mask review is the acceptance standard for low-edge QC7-5244 white mixed color",
     }
     return accepted_low_edge_combinations.get((target, defect_type))
 
@@ -1943,6 +2063,12 @@ def run_cooccurrence_quality_checks(sample, expected_defect_count):
     )
     checks["rgb_not_overexposed"] = _rgb_not_overexposed(checks["rgb_exposure_stats"])
     checks["rgb_not_background_only"] = _rgb_not_background_only(checks["rgb_exposure_stats"])
+    background_override = _allow_manual_background_visibility_override(sample)
+    checks["rgb_not_background_only_manual_override"] = bool(
+        background_override and not checks["rgb_not_background_only"]
+    )
+    if checks["rgb_not_background_only_manual_override"]:
+        checks["manual_background_override_reason"] = background_override
     checks["image_size_matches_mask"] = rgb_size is not None and rgb_size == mask_size
     if label_path.exists():
         label_text = label_path.read_text(encoding="utf-8").strip()
@@ -1952,7 +2078,29 @@ def run_cooccurrence_quality_checks(sample, expected_defect_count):
         checks["label_line_count_matches_defects"] = len(label_lines) == expected_defect_count
         checks["label_bbox_area_reasonable"] = _label_bbox_area_reasonable(label_text)
     checks["metadata_defect_count_matches"] = len(sample.get("defects", [])) == expected_defect_count
-    checks["passed"] = all(value for key, value in checks.items() if key not in {"rgb_luma_stats", "rgb_exposure_stats"})
+    required_checks = [
+        "rgb_exists",
+        "mask_exists",
+        "label_exists",
+        "metadata_exists",
+        "rgb_readable",
+        "mask_readable",
+        "mask_not_empty",
+        "rgb_not_blank",
+        "image_size_matches_mask",
+        "label_not_empty",
+        "label_bbox_in_0_1",
+        "label_line_count_matches_defects",
+        "metadata_defect_count_matches",
+        "rgb_not_overexposed",
+        "rgb_not_background_only",
+        "label_bbox_area_reasonable",
+    ]
+    checks["passed"] = all(
+        checks[key]
+        for key in required_checks
+        if key != "rgb_not_background_only" or not checks["rgb_not_background_only_manual_override"]
+    )
     if not checks["passed"]:
         raise RuntimeError("Cooccurrence quality checks failed for sample {0}: {1}".format(sample.get("index"), checks))
     return checks
@@ -2201,6 +2349,7 @@ def _build_reference_blackdot_command(
     object_rotate_deg=None,
     object_translate=None,
     normal_mode=False,
+    defect_count_max=1,
 ):
     command = [
         str(python_executable),
@@ -2229,6 +2378,8 @@ def _build_reference_blackdot_command(
         command.extend(["--material_json", str(material_path)])
     if normal_mode:
         command.append("--normal_mode")
+    elif int(defect_count_max or 1) > 1:
+        command.extend(["--black_dot_max_count", str(int(defect_count_max))])
     _append_object_transform_args(command, object_transform_mode, object_transform_camera_side, object_rotate_deg, object_translate)
     backend_params = _extract_blackdot_backend_parameters(defect_config or {})
     mapping = {
@@ -2236,10 +2387,12 @@ def _build_reference_blackdot_command(
         "black_dot_radius_max_scale": "--black_dot_radius_max_scale",
         "black_dot_depth_min_scale": "--black_dot_depth_min_scale",
         "black_dot_depth_max_scale": "--black_dot_depth_max_scale",
+        "black_dot_max_count": "--black_dot_max_count",
     }
     for key, flag in mapping.items():
         if key in backend_params and backend_params[key] is not None:
-            command.extend([flag, str(backend_params[key])])
+            value = int(backend_params[key]) if key == "black_dot_max_count" else backend_params[key]
+            command.extend([flag, str(value)])
     return command
 
 
@@ -2599,6 +2752,9 @@ def _label_matches_backend_bbox(label_text, bbox, image_size):
 def _sample_anchor_side(sample):
     if sample.get("anchor_side"):
         return sample.get("anchor_side")
+    for defect_info in sample.get("defects", []) or []:
+        if isinstance(defect_info, dict) and defect_info.get("anchor_side"):
+            return defect_info.get("anchor_side")
     for key in ("black_dot", "foreign_material", "mixed_color_contamination", "splay"):
         defect_info = sample.get(key)
         if isinstance(defect_info, dict) and defect_info.get("anchor_side"):

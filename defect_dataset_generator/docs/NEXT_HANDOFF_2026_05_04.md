@@ -1,6 +1,6 @@
 # Next Handoff
 
-Last updated: 2026-05-05
+Last updated: 2026-05-06
 
 This is the latest short handoff for the next maintainer. Use it together with:
 
@@ -8,6 +8,7 @@ This is the latest short handoff for the next maintainer. Use it together with:
 defect_dataset_generator\docs\SYSTEM_USAGE_GUIDE.md
 defect_dataset_generator\docs\BLACK_DOT_SINGLE_DEFECT_3K_5K_HANDOFF.md
 defect_dataset_generator\docs\APPROVED_NON_BLACK_DEFECT_3K_FILLER_HANDOFF.md
+defect_dataset_generator\docs\FINAL_PACKAGE_CONTENTS.md
 examples\my_project\DEFECT_GENERATION_UI_GUIDE.md
 examples\my_project\P101040_BLACKDOT_ROTATION_SAMPLING_CASE.md
 ```
@@ -23,6 +24,13 @@ plastic workpieces. The next work is to verify the updated docs, continue safe
 - Final dataset target is 3k-5k images.
 - The current assembled dataset contains `3472` rows: `2772` defect rows and
   `700` regenerated normal rows.
+- Final packaging should keep source code, model assets, and generated dataset
+  as separate packages.
+- Same-type multi-defect generation is available through
+  `generate-target --defect-count-max N` and the desktop UI `Max Defects`
+  control in single-defect mode.
+- For QC7-5244 white mixed-color, use the material-driven reference backend.
+  The older generic-patch smoke output for this combination is invalid.
 - Model files should not be pushed to GitHub. The user will provide models by
   network disk.
 - Black-dot-containing cooccurrence is not in the current generation plan.

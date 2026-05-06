@@ -78,8 +78,8 @@ MIXED_COLOR_MODEL_PROFILES = {
             "mid_left": (-0.115, -0.065),
             "debug_center_right": (-0.020, -0.055),
         },
-        "radius_x_factor": (0.009, 0.020),
-        "radius_y_factor": (0.0020, 0.0034),
+        "radius_x_factor": (0.016, 0.032),
+        "radius_y_factor": (0.0048, 0.0085),
         "use_projected_scoring": True,
         "apply_camera_plane_offsets": True,
     },
@@ -130,6 +130,7 @@ def parse_args():
     parser.add_argument("--save_blend", action="store_true")
     parser.add_argument("--enable_mixed_color", action="store_true")
     parser.add_argument("--mixed_color_seed", type=int, default=43)
+    parser.add_argument("--defect_count_max", type=int, default=1)
     parser.add_argument("--anchor_sides", nargs="+", choices=["front", "back"], default=["front"])
     parser.add_argument("--debug_mixed_color_strong", action="store_true")
     parser.add_argument("--debug_center_mixed_color", action="store_true")
@@ -346,6 +347,12 @@ def apply_object_view_transform(primary_obj, defect_info, transform):
         obj = bpy.data.objects.get(name) if name else None
         if obj is not None and obj not in transform_objects:
             transform_objects.append(obj)
+    for child_defect in defect_info.get("defects") or []:
+        for key in ("control_object", "mask_object", "object_name"):
+            name = child_defect.get(key)
+            obj = bpy.data.objects.get(name) if name else None
+            if obj is not None and obj not in transform_objects:
+                transform_objects.append(obj)
     for obj in transform_objects:
         obj.matrix_world = matrix @ obj.matrix_world
     if defect_info.get("world_point"):
@@ -775,7 +782,7 @@ def mixed_color_reference_materials():
     ]
     return {
         "tone_rgba": random.choice(palettes),
-        "mix_factor": random.uniform(0.34, 0.52),
+        "mix_factor": random.uniform(0.46, 0.66),
         "roughness_delta": random.uniform(0.04, 0.11),
         "wave_scale": random.uniform(14.0, 24.0),
         "wave_distortion": random.uniform(7.0, 12.0),
@@ -807,7 +814,7 @@ def mixed_color_reference_materials():
         "directional_strength": random.uniform(0.85, 1.10),
         "focal_radius": random.uniform(0.13, 0.22),
         "focal_strength": random.uniform(0.28, 0.44),
-        "rgb_visibility_boost": random.uniform(1.8, 2.6),
+        "rgb_visibility_boost": random.uniform(2.4, 3.4),
         "focal_rgb_boost": random.uniform(0.08, 0.18),
         "color_noise_strength": 0.01,
         "label_threshold": random.uniform(0.15, 0.22),
@@ -824,12 +831,12 @@ def mixed_color_reference_materials():
         "width_noise_strength": random.uniform(0.42, 0.70),
         # Visibility calibration pass: let the low-frequency material drift dominate RGB,
         # while the directional streak remains a secondary detail layer.
-        "soft_color_mask_weight": 0.70,
-        "streak_detail_mask_weight": 0.22,
+        "soft_color_mask_weight": 0.82,
+        "streak_detail_mask_weight": 0.26,
         "focal_mask_weight": 0.055,
         "label_rgb_mask_weight": 0.35,
-        "soft_mix_strength": 0.72,
-        "detail_mix_strength": random.uniform(0.08, 0.16),
+        "soft_mix_strength": 0.86,
+        "detail_mix_strength": random.uniform(0.12, 0.22),
     }
 
 
@@ -1421,21 +1428,34 @@ def build_mixed_color_mask_nodes(tree, links, control_object, defect_params, pre
     )
 
 
-def apply_mixed_color_to_main_material(main_material, control_object, defect_params, debug_mixed_color_strong=False):
+def apply_mixed_color_to_main_material(
+    main_material,
+    control_object,
+    defect_params,
+    debug_mixed_color_strong=False,
+    cleanup_existing=True,
+    node_prefix="QC75244_MIXED_MAT",
+):
     tree = main_material.node_tree
     nodes = tree.nodes
     links = tree.links
     bsdf = find_principled(main_material)
     base_color_node = nodes["QC75244_BASE_COLOR_RGB"]
     base_roughness_mix = nodes["QC75244_BASE_ROUGHNESS_MIX"]
-    cleanup_mixed_color_material_nodes(main_material)
+    if cleanup_existing:
+        cleanup_mixed_color_material_nodes(main_material)
+    base_color_source = (
+        bsdf.inputs["Base Color"].links[0].from_socket
+        if not cleanup_existing and bsdf.inputs["Base Color"].is_linked
+        else base_color_node.outputs["Color"]
+    )
 
     mask_socket, mask_color_socket, directional_socket, focal_socket, soft_mask_socket, streak_mask_socket, halo_mask_socket = build_mixed_color_mask_nodes(
         tree,
         links,
         control_object,
         defect_params,
-        "QC75244_MIXED_MAT",
+        node_prefix,
     )
 
     defect_color = nodes.new("ShaderNodeRGB")
@@ -1456,19 +1476,19 @@ def apply_mixed_color_to_main_material(main_material, control_object, defect_par
         # material drift than yellow patching. Keep the tone relative to the
         # current white base so it remains internal to the plastic material.
         (
-            random.uniform(-0.165, -0.115),
-            random.uniform(-0.180, -0.130),
             random.uniform(-0.235, -0.165),
+            random.uniform(-0.255, -0.180),
+            random.uniform(-0.315, -0.225),
         ),
         (
-            random.uniform(-0.235, -0.165),
-            random.uniform(-0.235, -0.165),
-            random.uniform(-0.250, -0.180),
+            random.uniform(-0.300, -0.215),
+            random.uniform(-0.295, -0.210),
+            random.uniform(-0.315, -0.225),
         ),
         (
-            random.uniform(-0.145, -0.095),
-            random.uniform(-0.190, -0.130),
+            random.uniform(-0.195, -0.135),
             random.uniform(-0.260, -0.185),
+            random.uniform(-0.335, -0.245),
         ),
     ]
     raw_soft_delta = random.choice(soft_delta_modes)
@@ -1686,7 +1706,7 @@ def apply_mixed_color_to_main_material(main_material, control_object, defect_par
     links.new(rgb_mask_sum_c.outputs["Value"], rgb_mask_boost.inputs[0])
     links.new(rgb_mask_boost.outputs["Value"], final_rgb_mask.inputs["Value"])
     links.new(final_rgb_mask.outputs["Result"], soft_mix_strength.inputs[0])
-    links.new(base_color_node.outputs["Color"], soft_color_mix.inputs[1])
+    links.new(base_color_source, soft_color_mix.inputs[1])
     links.new(soft_defect_color.outputs["Color"], soft_color_mix.inputs[2])
     links.new(soft_mix_strength.outputs["Value"], soft_color_mix.inputs["Fac"])
     links.new(halo_mask_socket, halo_mix_strength.inputs[0])
@@ -1820,6 +1840,8 @@ def add_mixed_color_contamination(
     allowed_sides=None,
     debug_mixed_color_strong=False,
     debug_center_mixed_color=False,
+    cleanup_material_nodes=True,
+    material_node_prefix="QC75244_MIXED_MAT",
 ):
     candidate_polygons = material_info.get("mixed_color_candidate_polygons", [])
     if not candidate_polygons:
@@ -1947,6 +1969,8 @@ def add_mixed_color_contamination(
         control,
         defect_params,
         debug_mixed_color_strong=debug_mixed_color_strong,
+        cleanup_existing=cleanup_material_nodes,
+        node_prefix=material_node_prefix,
     )
     mixed_material_targets = [main_material.name]
     edge_material_name = material_info.get("edge_wall_material")
@@ -1960,6 +1984,8 @@ def add_mixed_color_contamination(
             control,
             defect_params,
             debug_mixed_color_strong=debug_mixed_color_strong,
+            cleanup_existing=cleanup_material_nodes,
+            node_prefix=material_node_prefix + "_EDGE",
         )
         mixed_material_targets.append(edge_material.name)
     control["defect_class"] = "mixed_color_contamination"
@@ -2029,6 +2055,51 @@ def add_mixed_color_contamination(
             )
             for key, value in defect_params.items()
         },
+    }
+
+
+def add_same_type_mixed_color_contaminations(
+    primary_obj,
+    material_info,
+    max_dim,
+    camera=None,
+    allowed_sides=None,
+    debug_mixed_color_strong=False,
+    debug_center_mixed_color=False,
+    max_count=1,
+):
+    defect_count = random.randint(1, max(1, int(max_count)))
+    defects = []
+    for instance_index in range(defect_count):
+        defect = add_mixed_color_contamination(
+            primary_obj,
+            material_info,
+            max_dim,
+            camera=camera,
+            allowed_sides=allowed_sides,
+            debug_mixed_color_strong=debug_mixed_color_strong,
+            debug_center_mixed_color=debug_center_mixed_color,
+            cleanup_material_nodes=(instance_index == 0),
+            material_node_prefix=f"QC75244_MIXED_MAT_{instance_index:02d}",
+        )
+        defect["instance_index"] = instance_index
+        defects.append(defect)
+    points = [Vector(item["world_point"]) for item in defects if item.get("world_point")]
+    center = sum(points, Vector((0.0, 0.0, 0.0))) / max(1, len(points)) if points else None
+    return {
+        "defect_type": "mixed_color_contamination",
+        "defect_type_internal": "mixed_color_contamination",
+        "defect_type_canonical": "mixed_color_contamination",
+        "appearance_mode": "white_low_contrast",
+        "shape_mode": "directional_streak_material_drift",
+        "mask_mode": "directional_streak_material_drift",
+        "defect_types": ["mixed_color_contamination" for _ in defects],
+        "defect_count": len(defects),
+        "defect_count_max": int(max_count),
+        "defects": defects,
+        "anchor_side": defects[0].get("anchor_side", "front") if defects else "front",
+        "world_point": [round(center.x, 5), round(center.y, 5), round(center.z, 5)] if center else None,
+        "generation_mode": "same_type_multi_defect",
     }
 
 
@@ -2566,15 +2637,28 @@ def main():
             apply_validation_jitter(camera)
         if args.enable_mixed_color:
             random.seed(args.mixed_color_seed + sample_id)
-            defect_info = add_mixed_color_contamination(
-                primary_obj,
-                material_info,
-                max_dim,
-                camera=camera,
-                allowed_sides=requested_sides,
-                debug_mixed_color_strong=args.debug_mixed_color_strong,
-                debug_center_mixed_color=args.debug_center_mixed_color,
-            )
+            defect_count_max = max(1, int(args.defect_count_max or 1))
+            if defect_count_max > 1:
+                defect_info = add_same_type_mixed_color_contaminations(
+                    primary_obj,
+                    material_info,
+                    max_dim,
+                    camera=camera,
+                    allowed_sides=requested_sides,
+                    debug_mixed_color_strong=args.debug_mixed_color_strong,
+                    debug_center_mixed_color=args.debug_center_mixed_color,
+                    max_count=defect_count_max,
+                )
+            else:
+                defect_info = add_mixed_color_contamination(
+                    primary_obj,
+                    material_info,
+                    max_dim,
+                    camera=camera,
+                    allowed_sides=requested_sides,
+                    debug_mixed_color_strong=args.debug_mixed_color_strong,
+                    debug_center_mixed_color=args.debug_center_mixed_color,
+                )
             defect_side = defect_info.get("anchor_side", initial_side)
             view_transform = build_object_view_transform(args, defect_info)
             camera_side = view_transform["camera_side"] if view_transform["enabled"] else defect_side
@@ -2621,11 +2705,43 @@ def main():
             mask_path = mask_dir / f"{sample_id:06d}.png"
             overlay_path = overlay_dir / f"{sample_id:06d}.png"
             label_path = yolo_dir / f"{sample_id:06d}.txt"
-            render_mixed_color_binary_mask(mask_path, primary_obj, material_info, defect_info)
-            binary, mask_width, mask_height = load_binary_mask_from_image(
-                mask_path,
-                threshold=float(defect_info.get("label_threshold", 0.2)),
-            )
+            defects_for_label = defect_info.get("defects") or [defect_info]
+            merged_binary = None
+            mask_width = None
+            mask_height = None
+            defect_bboxes = []
+            label_lines = []
+            for instance_index, item in enumerate(defects_for_label):
+                tmp_mask_path = mask_dir / f"{sample_id:06d}_mixed_{instance_index:02d}_tmp.png"
+                render_mixed_color_binary_mask(tmp_mask_path, primary_obj, material_info, item)
+                binary, mask_width, mask_height = load_binary_mask_from_image(
+                    tmp_mask_path,
+                    threshold=float(item.get("label_threshold", 0.2)),
+                )
+                if merged_binary is None:
+                    merged_binary = [0 for _ in binary]
+                merged_binary = [1 if a or b else 0 for a, b in zip(merged_binary, binary)]
+                item_bbox = bbox_from_binary_mask(binary, mask_width, mask_height)
+                if item_bbox is not None and item_bbox["xywh"][2] > 0 and item_bbox["xywh"][3] > 0:
+                    yolo_bbox = bbox_to_yolo(bpy.context.scene, item_bbox)
+                    label_lines.append(
+                        f"3 {yolo_bbox[0]:.6f} {yolo_bbox[1]:.6f} {yolo_bbox[2]:.6f} {yolo_bbox[3]:.6f}"
+                    )
+                    defect_bboxes.append(
+                        {
+                            "defect_type": "mixed_color_contamination",
+                            "class_id": 3,
+                            "bbox": item_bbox,
+                            "instance_index": item.get("instance_index", instance_index),
+                        }
+                    )
+                    item["mask_area_pixels"] = int(item_bbox["area_pixels"])
+                    item["bbox_xywh"] = item_bbox["xywh"]
+                tmp_mask_path.unlink(missing_ok=True)
+            if merged_binary is None:
+                merged_binary = []
+            save_binary_mask_image(mask_path, merged_binary, mask_width, mask_height, "REFERENCE_MIXED_COLOR_MASK_EXPORT")
+            binary = merged_binary
             bbox = bbox_from_binary_mask(binary, mask_width, mask_height)
             save_mask_overlay(
                 rgb_path,
@@ -2636,16 +2752,16 @@ def main():
                 bbox,
                 "REFERENCE_MIXED_COLOR_OVERLAY_EXPORT",
             )
-            label_text = ""
-            if bbox is not None and bbox["xywh"][2] > 0 and bbox["xywh"][3] > 0:
-                yolo_bbox = bbox_to_yolo(bpy.context.scene, bbox)
-                label_text = f"0 {yolo_bbox[0]:.6f} {yolo_bbox[1]:.6f} {yolo_bbox[2]:.6f} {yolo_bbox[3]:.6f}\n"
+            label_text = "\n".join(label_lines)
+            if label_text:
+                label_text += "\n"
             label_path.write_text(label_text, encoding="utf-8")
             label_info = {
                 "mask": str(mask_path.relative_to(output_dir)),
                 "overlay": str(overlay_path.relative_to(output_dir)),
                 "label_yolo": str(label_path.relative_to(output_dir)),
                 "bbox": bbox,
+                "defect_bboxes": defect_bboxes,
                 "mask_width": mask_width,
                 "mask_height": mask_height,
                 "label_semantics": "Complete mixed-color patch footprint on the main plane, including the full soft area-like material non-uniformity region rather than only the deepest center.",

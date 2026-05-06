@@ -1,6 +1,6 @@
 # Synthetic Defect Dataset Generator Usage Guide
 
-Last updated: 2026-05-05
+Last updated: 2026-05-06
 
 This guide is the current practical usage document for the BlenderProc-based
 plastic-part defect dataset generator. It is written for the next operator or
@@ -23,6 +23,39 @@ Run commands from the project root:
 
 ```powershell
 cd E:\BlenderProject\BlenderProc
+```
+
+## Final Packaging
+
+The recommended final package split is documented in:
+
+```text
+defect_dataset_generator\docs\FINAL_PACKAGE_CONTENTS.md
+```
+
+Use separate packages for:
+
+- source code;
+- model assets;
+- generated dataset.
+
+Do not mix generated outputs or model assets into the source code package.
+The cleaned dataset root is:
+
+```text
+defect_dataset_generator\outputs\dataset\final_3k_5k_dataset_20260504
+```
+
+It should contain only:
+
+```text
+images\
+masks\
+labels\
+metadata\
+manifest.csv
+dataset_summary.json
+README_DATASET.md
 ```
 
 ## Main Interfaces
@@ -84,6 +117,36 @@ Single defect:
 
 ```powershell
 D:\Anaconda\envs\defect_eval\python.exe defect_dataset_generator\app.py generate-target --target <target> --defects <defect> --count <count> --out <output_dir> --samples <samples> --seed <seed> --anchor-sides <front|back|side>
+```
+
+For supported single-defect generation, `--defect-count-max` can be used to
+sample multiple same-type defects in one image. For example, the command below
+samples a random black-dot count from `1` to `3` for every rendered image:
+
+```powershell
+D:\Anaconda\envs\defect_eval\python.exe defect_dataset_generator\app.py generate-target --target p101040_blue --defects black_dot --count 10 --out <output_dir> --samples 24 --seed <seed> --anchor-sides front --defect-count-max 3
+```
+
+The merged mask contains all visible instances. The YOLO label file contains
+one row per visible instance, and metadata records the sampled `defect_count`
+plus per-instance bbox and placement information.
+
+Supported same-type multi-defect routes currently include reference black-dot
+targets, generic main-plane single-defect targets, QC71336 prebuilt
+foreign-material/splay routes, and QC7-5244 white mixed-color reference
+generation.
+
+In the desktop UI, single-defect mode exposes `Max Defects` in the main numeric
+control row. Set it to `3` to generate `1..3` defects per image. This main
+control passes `--defect-count-max` directly. The per-defect parameter panel may
+also expose `max count`; those custom parameters only apply when `Use custom
+parameters` is enabled and are intended for fine-grained overrides.
+
+For QC7-5244 white mixed-color, the valid multi-defect backend is the
+material-driven reference script, not the generic main-plane fallback:
+
+```text
+examples\my_project\reference_blend_qc75244_mixed_color_profile_debug.py
 ```
 
 Optional UI-style parameter override:

@@ -50,6 +50,7 @@ def parse_args():
         help="Reference-scene defect type to generate.",
     )
     parser.add_argument("--defect_seed", type=int, default=23)
+    parser.add_argument("--defect_count_max", type=int, default=1)
     parser.add_argument("--anchor_sides", nargs="+", choices=["front", "back"], default=["front"])
     parser.add_argument("--debug_splay_strong", action="store_true")
     parser.add_argument("--object_transform_mode", choices=["none", "keep_camera"], default="none")
@@ -229,6 +230,16 @@ def apply_object_view_transform(objects, defect_info, transform):
         obj = bpy.data.objects.get(name) if name else None
         if obj is not None and obj not in transform_objects:
             transform_objects.append(obj)
+    for name in defect_info.get("mask_objects") or []:
+        obj = bpy.data.objects.get(name) if name else None
+        if obj is not None and obj not in transform_objects:
+            transform_objects.append(obj)
+    for child_defect in defect_info.get("defects") or []:
+        for key in ("control_object", "object_name", "mask_object", "foreign_object"):
+            name = child_defect.get(key)
+            obj = bpy.data.objects.get(name) if name else None
+            if obj is not None and obj not in transform_objects:
+                transform_objects.append(obj)
     for obj in transform_objects:
         obj.matrix_world = matrix @ obj.matrix_world
     if defect_info.get("world_point"):
@@ -1945,6 +1956,46 @@ def add_foreign_material_splay_cooccurrence(imported_objects, material_info, max
     }
 
 
+def add_same_type_multi_defects(imported_objects, material_info, max_dim, image_offset, seed, defect_type, max_count, strong=False):
+    defect_count = random.Random(seed + image_offset).randint(1, max(1, int(max_count)))
+    defects = []
+    for instance_index in range(defect_count):
+        instance_offset = image_offset + instance_index * 10000
+        instance_seed = seed + instance_index * 100000
+        if defect_type == "foreign_material":
+            defect = add_foreign_material(imported_objects, material_info, max_dim, instance_offset, instance_seed)
+        elif defect_type == "splay":
+            defect = add_splay(
+                imported_objects,
+                material_info,
+                max_dim,
+                instance_offset,
+                instance_seed,
+                strong=strong,
+            )
+        else:
+            raise RuntimeError(f"Unsupported same-type multi defect: {defect_type}")
+        defect["instance_index"] = instance_index
+        defects.append(defect)
+    points = [Vector(item["world_point"]) for item in defects if item.get("world_point")]
+    center = sum(points, Vector((0.0, 0.0, 0.0))) / max(1, len(points)) if points else None
+    mask_objects = [item["mask_object"] for item in defects if item.get("mask_object")]
+    anchor_side = defects[0].get("anchor_side", "front") if defects else "front"
+    return {
+        "defect_type": defect_type,
+        "defect_type_internal": defect_type,
+        "defect_type_canonical": defect_type,
+        "defect_types": [defect_type for _ in defects],
+        "defect_count": len(defects),
+        "defect_count_max": int(max_count),
+        "defects": defects,
+        "mask_objects": mask_objects,
+        "world_point": [float(center.x), float(center.y), float(center.z)] if center else None,
+        "anchor_side": anchor_side,
+        "generation_mode": "same_type_multi_defect",
+    }
+
+
 def build_qc71336_white_material(
     name,
     base_color,
@@ -2453,7 +2504,19 @@ def main():
         clear_reference_generated_defect_objects()
         restore_object_materials(imported, material_templates)
         defect_info = None
-        if args.defect_type == "foreign_material":
+        defect_count_max = max(1, int(args.defect_count_max or 1))
+        if args.defect_type in {"foreign_material", "splay"} and defect_count_max > 1:
+            defect_info = add_same_type_multi_defects(
+                imported,
+                surface_info,
+                max_dim,
+                image_offset,
+                args.defect_seed,
+                args.defect_type,
+                defect_count_max,
+                strong=args.debug_splay_strong,
+            )
+        elif args.defect_type == "foreign_material":
             defect_info = add_foreign_material(imported, surface_info, max_dim, image_offset, args.defect_seed)
         elif args.defect_type == "splay":
             defect_info = add_splay(
@@ -2525,7 +2588,7 @@ def main():
             )
             label_text = ""
             defect_bboxes = []
-            if args.defect_type == "foreign_material_splay":
+            if defect_info.get("defects"):
                 class_ids = {"foreign_material": 1, "splay": 2}
                 for defect_item in defect_info.get("defects", []):
                     defect_mask_object = defect_item.get("mask_object")
@@ -2548,12 +2611,14 @@ def main():
                                 "defect_type": defect_name,
                                 "class_id": class_id,
                                 "bbox": tmp_bbox,
+                                "instance_index": defect_item.get("instance_index"),
                             }
                         )
                     tmp_mask_path.unlink(missing_ok=True)
             elif bbox is not None and bbox["xywh"][2] > 0 and bbox["xywh"][3] > 0:
                 yolo_bbox = bbox_to_yolo(bpy.context.scene, bbox)
-                label_text = f"0 {yolo_bbox[0]:.6f} {yolo_bbox[1]:.6f} {yolo_bbox[2]:.6f} {yolo_bbox[3]:.6f}\n"
+                class_id = {"foreign_material": 1, "splay": 2}.get(args.defect_type, 0)
+                label_text = f"{class_id} {yolo_bbox[0]:.6f} {yolo_bbox[1]:.6f} {yolo_bbox[2]:.6f} {yolo_bbox[3]:.6f}\n"
             label_path.write_text(label_text, encoding="utf-8")
             label_rel = str(label_path.relative_to(output_dir))
             bbox_area_pixels = bbox["xywh"][2] * bbox["xywh"][3] if bbox is not None else 0
@@ -2629,6 +2694,7 @@ def main():
         "render_height": args.height,
         "cycles_samples": args.samples,
         "defect_seed": args.defect_seed,
+        "defect_count_max": max(1, int(args.defect_count_max or 1)),
         "debug_splay_strong": bool(args.debug_splay_strong),
         "gpu_info": gpu_info,
         "lighting": capture_light_summary(),

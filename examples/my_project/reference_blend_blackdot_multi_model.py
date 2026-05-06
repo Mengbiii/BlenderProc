@@ -119,6 +119,12 @@ def parse_args():
     parser.add_argument("--material_json", "--material-json", default=None, help="Optional visual material calibration JSON for the main object material.")
     parser.add_argument("--anchor_sides", nargs="+", choices=["front", "back"], default=None)
     parser.add_argument("--normal_mode", action="store_true", help="Render normal/no-defect samples with the reference black-dot scene, camera, lighting, and material setup.")
+    parser.add_argument(
+        "--black_dot_max_count",
+        type=int,
+        default=1,
+        help="Maximum same-type black-dot defects per image. Defect mode samples a random count in [1, N].",
+    )
     parser.add_argument("--black_dot_radius_min_scale", type=float, default=None)
     parser.add_argument("--black_dot_radius_max_scale", type=float, default=None)
     parser.add_argument("--black_dot_depth_min_scale", type=float, default=None)
@@ -1205,6 +1211,37 @@ def apply_object_view_transform(objects, defect, transform):
     bpy.context.view_layer.update()
 
 
+def apply_object_view_transform_to_defects(objects, defects, transform):
+    rotation_deg = transform.get("rotation_degrees_xyz") or [0.0, 0.0, 0.0]
+    translation = Vector(transform.get("translation_xyz") or [0.0, 0.0, 0.0])
+    bb_min, bb_max = world_bbox(objects)
+    pivot = (bb_min + bb_max) * 0.5
+    rotation = Matrix.Identity(4)
+    rotation = Matrix.Rotation(math.radians(rotation_deg[2]), 4, "Z") @ rotation
+    rotation = Matrix.Rotation(math.radians(rotation_deg[1]), 4, "Y") @ rotation
+    rotation = Matrix.Rotation(math.radians(rotation_deg[0]), 4, "X") @ rotation
+    matrix = Matrix.Translation(pivot + translation) @ rotation @ Matrix.Translation(-pivot)
+    transform_objects = list(objects)
+    for defect in defects:
+        for key in ("dot_object", "patch_object", "foreign_object", "mask_object"):
+            name = defect.get(key)
+            obj = bpy.data.objects.get(name) if name else None
+            if obj is not None and obj not in transform_objects:
+                transform_objects.append(obj)
+    for obj in transform_objects:
+        obj.matrix_world = matrix @ obj.matrix_world
+    for defect in defects:
+        if defect.get("world_point"):
+            world_point = matrix @ Vector(defect["world_point"])
+            defect["world_point"] = [float(world_point.x), float(world_point.y), float(world_point.z)]
+        if defect.get("world_normal"):
+            world_normal = (matrix.to_3x3() @ Vector(defect["world_normal"])).normalized()
+            defect["world_normal"] = [float(world_normal.x), float(world_normal.y), float(world_normal.z)]
+    transform["pivot_world"] = [float(pivot.x), float(pivot.y), float(pivot.z)]
+    transform["objects_transformed"] = [obj.name for obj in transform_objects]
+    bpy.context.view_layer.update()
+
+
 def refine_camera_shift_for_defect(camera, world_point, rng):
     scene = bpy.context.scene
     projected = world_to_camera_view(scene, camera, world_point)
@@ -1664,6 +1701,50 @@ def add_black_dot(model_name, objects, camera_presets, radius_range, depth_range
     }
 
 
+def defects_min_world_distance_ok(candidate, existing, min_factor=2.7):
+    candidate_point = Vector(candidate["world_point"])
+    candidate_radius = float(candidate.get("radius", 0.0))
+    for defect in existing:
+        other_point = Vector(defect["world_point"])
+        other_radius = float(defect.get("radius", 0.0))
+        min_distance = max(candidate_radius, other_radius) * min_factor
+        if (candidate_point - other_point).length < min_distance:
+            return False
+    return True
+
+
+def create_black_dot_instances(model_name, objects, camera_presets, radius_range, depth_range, rng, allowed_sides,
+                               preset_config, count):
+    defects = []
+    attempts_per_defect = 36
+    for _ in range(count):
+        accepted = None
+        rejected = []
+        for _attempt in range(attempts_per_defect):
+            candidate = add_black_dot(
+                model_name,
+                objects,
+                camera_presets,
+                radius_range,
+                depth_range,
+                rng,
+                allowed_sides,
+                preset_config,
+            )
+            if defects_min_world_distance_ok(candidate, defects):
+                accepted = candidate
+                break
+            rejected.append(candidate)
+            for key in ("dot_object", "patch_object"):
+                obj = bpy.data.objects.get(candidate.get(key))
+                if obj is not None:
+                    bpy.data.objects.remove(obj, do_unlink=True)
+        if accepted is None:
+            raise RuntimeError("Could not place separated black-dot instances.")
+        defects.append(accepted)
+    return defects
+
+
 def load_mask_binary(mask_path):
     image = bpy.data.images.load(str(mask_path), check_existing=False)
     try:
@@ -1784,29 +1865,32 @@ def make_emission_mask_material(name="UNIFIED_BLACK_DOT_MASK_MAT"):
     return mat
 
 
-def render_black_dot_binary_mask(mask_path, dot_object_name):
+def render_black_dot_binary_mask(mask_path, dot_object_names):
     scene = bpy.context.scene
-    dot = bpy.data.objects.get(dot_object_name)
-    if dot is None:
-        raise RuntimeError(f"Black-dot object not found for mask render: {dot_object_name}")
+    if isinstance(dot_object_names, str):
+        dot_object_names = [dot_object_names]
+    dots = [bpy.data.objects.get(name) for name in dot_object_names]
+    missing = [name for name, obj in zip(dot_object_names, dots) if obj is None]
+    if missing:
+        raise RuntimeError(f"Black-dot object not found for mask render: {missing}")
+    dot_names = {obj.name for obj in dots}
     original_engine = scene.render.engine
     original_samples = int(getattr(scene.cycles, "samples", 1))
     original_adaptive = bool(getattr(scene.cycles, "use_adaptive_sampling", False))
     original_filepath = scene.render.filepath
     original_hide_render = {obj.name: bool(obj.hide_render) for obj in bpy.data.objects}
-    original_materials = [mat for mat in dot.data.materials]
+    original_materials = {dot.name: [mat for mat in dot.data.materials] for dot in dots}
     bg = find_background_node(scene.world)
     original_bg_color = tuple(bg.inputs["Color"].default_value) if bg is not None else None
     original_bg_strength = float(bg.inputs["Strength"].default_value) if bg is not None else None
     try:
         for obj in bpy.data.objects:
             if obj.type == "MESH":
-                obj.hide_render = obj.name == dot_object_name
-        for obj in bpy.data.objects:
-            if obj.type == "MESH":
-                obj.hide_render = obj.name != dot_object_name
-        dot.data.materials.clear()
-        dot.data.materials.append(make_emission_mask_material())
+                obj.hide_render = obj.name not in dot_names
+        mask_material = make_emission_mask_material()
+        for dot in dots:
+            dot.data.materials.clear()
+            dot.data.materials.append(mask_material)
         if bg is not None:
             bg.inputs["Color"].default_value = (0.0, 0.0, 0.0, 1.0)
             bg.inputs["Strength"].default_value = 1.0
@@ -1822,13 +1906,25 @@ def render_black_dot_binary_mask(mask_path, dot_object_name):
         if bg is not None and original_bg_color is not None:
             bg.inputs["Color"].default_value = original_bg_color
             bg.inputs["Strength"].default_value = original_bg_strength
-        dot.data.materials.clear()
-        for mat in original_materials:
-            dot.data.materials.append(mat)
+        for dot in dots:
+            dot.data.materials.clear()
+            for mat in original_materials.get(dot.name, []):
+                dot.data.materials.append(mat)
         for obj in bpy.data.objects:
             if obj.name in original_hide_render:
                 obj.hide_render = original_hide_render[obj.name]
         bpy.context.view_layer.update()
+
+
+def merge_binary_masks(mask_binaries):
+    if not mask_binaries:
+        return []
+    merged = [0] * len(mask_binaries[0])
+    for binary in mask_binaries:
+        for idx, value in enumerate(binary):
+            if value:
+                merged[idx] = 1
+    return merged
 
 
 def setup_model(args, preset):
@@ -1850,6 +1946,7 @@ def write_notes(output_dir, args, preset):
         f"- seed: `{args.seed}`",
         f"- anchor_sides: `{args.anchor_sides or preset['anchor_sides']}`",
         f"- normal_mode: `{bool(args.normal_mode)}`",
+        f"- black_dot_max_count: `{args.black_dot_max_count}`",
         "- label policy: in defect mode, mask and YOLO bbox include the main black-dot object only; in normal mode, mask and YOLO label are empty.",
         "- camera, light, and optional object-pose jitter are sampled per accepted image.",
         "- by default only the first debug blend is saved when `--save_blend --save_blend_only_first` are used.",
@@ -1859,6 +1956,8 @@ def write_notes(output_dir, args, preset):
 
 def main():
     args = parse_args()
+    if args.black_dot_max_count < 1:
+        raise ValueError("--black_dot_max_count must be >= 1")
     apply_cli_safe_anchor_window(args)
     preset = MODEL_PRESETS[args.model]
     output_dir = mkdir(Path(args.output).resolve())
@@ -1907,6 +2006,7 @@ def main():
         "render_device": gpu_info,
         "radius_scale_range": radius_range,
         "depth_scale_range": depth_range,
+        "black_dot_count_range": [0, 0] if args.normal_mode else [1, int(args.black_dot_max_count)],
         "anchor_sides": allowed_sides,
         "samples": [],
         "failures": [],
@@ -2011,7 +2111,8 @@ def main():
                 print(f"[{accepted:04d}/{args.num:04d}] frame={image_index:06d} normal side={camera_side}")
                 continue
 
-            defect = add_black_dot(
+            defect_count = rng.randint(1, int(args.black_dot_max_count))
+            defects = create_black_dot_instances(
                 args.model,
                 objects,
                 active_camera_presets,
@@ -2020,38 +2121,62 @@ def main():
                 rng,
                 allowed_sides,
                 preset,
+                defect_count,
             )
-            view_transform = build_object_view_transform(args, defect)
-            camera_side = view_transform["camera_side"] if view_transform["enabled"] else defect["anchor_side"]
+            primary_defect = defects[0]
+            view_transform = build_object_view_transform(args, primary_defect)
+            camera_side = view_transform["camera_side"] if view_transform["enabled"] else primary_defect["anchor_side"]
             apply_camera_preset(camera, active_camera_presets[camera_side])
             configure_support_for_view_side(objects, camera_side)
             if view_transform["enabled"]:
                 camera_jitter = {"enabled": False, "reason": "object_transform_keep_camera"}
                 light_jitter = {"enabled": False, "reason": "object_transform_keep_camera"}
-                apply_object_view_transform(objects, defect, view_transform)
+                apply_object_view_transform_to_defects(objects, defects, view_transform)
             else:
+                focus_point = sum((Vector(defect["world_point"]) for defect in defects), Vector()) / float(len(defects))
                 camera_jitter = apply_camera_jitter(
                     camera,
                     objects,
-                    defect["anchor_side"],
-                    Vector(defect["world_point"]),
+                    primary_defect["anchor_side"],
+                    focus_point,
                     rng,
                     args.camera_jitter_strength,
                 )
                 light_jitter = apply_light_jitter(scene_state, rng, args.light_jitter_strength)
-            projected = world_to_camera_view(bpy.context.scene, camera, Vector(defect["world_point"]))
-            if projected.z <= 0.0 or not (0.06 <= projected.x <= 0.94 and 0.06 <= projected.y <= 0.94):
-                raise RuntimeError(f"defect outside camera frame after jitter: {[projected.x, projected.y, projected.z]}")
+            projected_points = []
+            for defect in defects:
+                projected = world_to_camera_view(bpy.context.scene, camera, Vector(defect["world_point"]))
+                projected_points.append([float(projected.x), float(projected.y), float(projected.z)])
+                if projected.z <= 0.0 or not (0.06 <= projected.x <= 0.94 and 0.06 <= projected.y <= 0.94):
+                    raise RuntimeError(f"defect outside camera frame after jitter: {[projected.x, projected.y, projected.z]}")
 
             rgb_path = rgb_dir / f"{image_index:06d}.png"
             mask_path = mask_dir / f"{image_index:06d}.png"
             overlay_path = overlay_dir / f"{image_index:06d}.png"
             label_path = label_dir / f"{image_index:06d}.txt"
             render_still(rgb_path)
-            render_black_dot_binary_mask(mask_path, defect["dot_object"])
-            binary, bbox, mask_width, mask_height = load_mask_binary(mask_path)
+            defect_binaries = []
+            defect_bboxes = []
+            for defect_idx, defect in enumerate(defects):
+                single_mask_path = mask_dir / f"{image_index:06d}_dot_{defect_idx:02d}.png"
+                render_black_dot_binary_mask(single_mask_path, defect["dot_object"])
+                binary, bbox, mask_width, mask_height = load_mask_binary(single_mask_path)
+                if bbox is None or bbox["xywh"][2] <= 0 or bbox["xywh"][3] <= 0:
+                    raise RuntimeError("black dot mask is empty after render")
+                defect["bbox"] = bbox
+                defect["instance_index"] = defect_idx
+                defect["projected_xy"] = projected_points[defect_idx]
+                defect_binaries.append(binary)
+                defect_bboxes.append(bbox)
+                try:
+                    single_mask_path.unlink()
+                except OSError:
+                    pass
+            binary = merge_binary_masks(defect_binaries)
+            save_binary_mask_image(mask_path, binary, mask_width, mask_height, "UNIFIED_BLACK_DOT_MERGED_MASK_EXPORT")
+            bbox = bbox_from_binary_mask(binary, mask_width, mask_height)
             if bbox is None or bbox["xywh"][2] <= 0 or bbox["xywh"][3] <= 0:
-                raise RuntimeError("black dot mask is empty after render")
+                raise RuntimeError("merged black dot mask is empty after render")
             save_mask_overlay(
                 rgb_path,
                 overlay_path,
@@ -2061,8 +2186,11 @@ def main():
                 bbox,
                 "UNIFIED_BLACK_DOT_OVERLAY_EXPORT",
             )
-            yolo = bbox_to_yolo(bpy.context.scene, bbox)
-            label_text = f"0 {yolo[0]:.6f} {yolo[1]:.6f} {yolo[2]:.6f} {yolo[3]:.6f}\n"
+            label_lines = []
+            for defect_bbox in defect_bboxes:
+                yolo = bbox_to_yolo(bpy.context.scene, defect_bbox)
+                label_lines.append(f"0 {yolo[0]:.6f} {yolo[1]:.6f} {yolo[2]:.6f} {yolo[3]:.6f}")
+            label_text = "\n".join(label_lines) + "\n"
             label_path.write_text(label_text, encoding="utf-8")
 
             blend_rel = None
@@ -2082,10 +2210,15 @@ def main():
                 "defect_type": "black_dot",
                 "defect_type_internal": "black_dot",
                 "defect_type_canonical": "black_dot",
+                "defect_types": ["black_dot"],
+                "defect_count": len(defects),
                 "defect_family": "embedded_internal",
                 "support_artifacts": ["black_dot_coupling_patch"],
-                "black_dot": defect,
+                "black_dot": primary_defect,
+                "black_dots": defects,
+                "defects": defects,
                 "bbox": bbox,
+                "instance_bboxes": defect_bboxes,
                 "mask_width": mask_width,
                 "mask_height": mask_height,
                 "object_jitter": object_jitter,
@@ -2096,7 +2229,7 @@ def main():
             })
             accepted += 1
             frame_index += 1
-            print(f"[{accepted:04d}/{args.num:04d}] frame={image_index:06d} side={defect['anchor_side']} bbox={bbox['xywh'] if bbox else None}")
+            print(f"[{accepted:04d}/{args.num:04d}] frame={image_index:06d} side={primary_defect['anchor_side']} defects={len(defects)} bbox={bbox['xywh'] if bbox else None}")
         except Exception as exc:
             metadata["failures"].append({
                 "frame_index": image_index,
