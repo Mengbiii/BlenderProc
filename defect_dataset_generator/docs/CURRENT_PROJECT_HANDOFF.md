@@ -56,6 +56,77 @@ smoke sample.
 The previous generic routes are still present for other targets. Push and
 release steps should be handled separately after local verification.
 
+## 2026-05-07 Same-Type Multi-Defect Supplement Dataset
+
+A standalone supplement dataset has been assembled for images that contain
+multiple defects of the same type in one image. This dataset is intentionally
+kept separate from the cleaned 3k-5k main dataset and should be treated as an
+optional supplement package.
+
+Supplement dataset root:
+
+```text
+defect_dataset_generator/outputs/dataset/same_type_multi_defect_supplement_dataset_20260507/
+```
+
+Expected contents:
+
+```text
+images/
+masks/
+labels/
+metadata/
+manifest.csv
+dataset_summary.json
+README_DATASET.md
+```
+
+Selection and audit policy:
+
+- only samples with at least two YOLO label rows were copied;
+- `_backend` directories were excluded;
+- every copied sample has matching RGB, mask, label, and metadata files;
+- label files contain 2 to 3 same-type defect instances;
+- the supplement is not merged into
+  `final_3k_5k_dataset_20260504/`.
+
+Final supplement audit:
+
+- Total samples: `470`
+- RGB files: `470`
+- Mask files: `470`
+- Label files: `470`
+- Metadata files: `470`
+- Empty or single-instance labels: `0`
+- Missing paired files: `0`
+
+Source roots:
+
+```text
+defect_dataset_generator/outputs/dataset/same_type_multi_defect_supplement_30_each_20260506/
+defect_dataset_generator/outputs/dataset/same_type_multi_defect_balanced_30_total_20260506/
+defect_dataset_generator/outputs/dataset/same_type_multi_defect_topup_small_batches_20260507/
+```
+
+Per-combination accepted multi-instance counts:
+
+| Combination | Count |
+| --- | ---: |
+| `p101040_blue_black_dot` | 60 |
+| `qc71336_black_foreign_material` | 34 |
+| `qc71336_black_splay` | 30 |
+| `qc71336_gray_black_dot` | 30 |
+| `qc71336_gray_mixed_color_contamination` | 30 |
+| `qc71336_white_black_dot` | 45 |
+| `qc71336_white_foreign_material` | 31 |
+| `qc7_5244_black_black_dot` | 30 |
+| `qc7_5244_black_foreign_material` | 30 |
+| `qc7_5244_black_splay` | 30 |
+| `qc7_5244_white_black_dot` | 30 |
+| `qc7_5244_white_mixed_color_contamination` | 30 |
+| `ql3_1052_black_foreign_material` | 30 |
+| `ql3_1052_black_splay` | 30 |
+
 ## 2026-05-06 Packaging Update
 
 The final packaging scope is now documented in:

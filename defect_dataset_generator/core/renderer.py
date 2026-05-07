@@ -2006,6 +2006,9 @@ def _fallback_bbox_for_reference_sample(sample, label_path, rgb_path, defect_typ
     label_text = label_path.read_text(encoding="utf-8").strip() if label_path.exists() else ""
     if label_text:
         return None
+    defect_info = _reference_defect_info(sample)
+    if isinstance(defect_info, dict) and int(defect_info.get("defect_count") or 0) > 1:
+        return None
     bbox = _sample_bbox(sample)
     if bbox is None:
         bbox = _defect_projection_fallback_bbox(sample, rgb_path)

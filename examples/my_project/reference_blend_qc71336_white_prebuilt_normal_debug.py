@@ -846,13 +846,18 @@ def create_surface_contamination_patch(world_point, world_normal, radius, mat, n
 
 
 def clear_reference_black_dot_objects():
-    for name in [
+    exact_names = {
         "REFERENCE_QC71336_BLACK_DOT",
         "REFERENCE_QC71336_BLACK_DOT_LOCAL_PATCH",
         "REFERENCE_QC71336_FOREIGN_MATERIAL",
-    ]:
-        obj = bpy.data.objects.get(name)
-        if obj is not None:
+    }
+    prefixes = (
+        "REFERENCE_QC71336_BLACK_DOT.",
+        "REFERENCE_QC71336_BLACK_DOT_LOCAL_PATCH.",
+        "REFERENCE_QC71336_FOREIGN_MATERIAL.",
+    )
+    for obj in list(bpy.data.objects):
+        if obj.name in exact_names or obj.name.startswith(prefixes):
             bpy.data.objects.remove(obj, do_unlink=True)
 
 
@@ -1445,6 +1450,7 @@ def add_foreign_material(
     depth_scale,
     allowed_sides=None,
     clear_existing=True,
+    force_stable_particle=False,
 ):
     if clear_existing:
         clear_reference_black_dot_objects()
@@ -1468,6 +1474,7 @@ def add_foreign_material(
     half_y = max(float(abs(dims.y)) * 0.5, 1e-6)
     max_dim = max(float(abs(dims.x)), float(abs(dims.y)), float(abs(dims.z)), 1e-6)
     back_main_plane_override = anchor["anchor_band"] == "back_face"
+    use_particle_shape = back_main_plane_override or force_stable_particle
     if back_main_plane_override:
         local_x_override = rng.uniform(-0.24, 0.24)
         local_y_override = rng.uniform(-0.24, 0.24)
@@ -1494,15 +1501,17 @@ def add_foreign_material(
         radius = rng.uniform(max_dim * 0.00070, max_dim * 0.00115)
     else:
         radius = rng.uniform(max_dim * 0.00105, max_dim * 0.00175)
+    if force_stable_particle:
+        radius = max(radius, FOREIGN_MATERIAL_VISIBLE_RADIUS_FLOOR * 1.18)
     radius = min(max(radius, FOREIGN_MATERIAL_VISIBLE_RADIUS_FLOOR), FOREIGN_MATERIAL_VISIBLE_RADIUS_CEILING)
     depth = radius * rng.uniform(0.10, 0.24)
 
     mesh_seed = seed + image_offset
-    if back_main_plane_override:
+    if use_particle_shape:
         bpy.ops.mesh.primitive_ico_sphere_add(
             subdivisions=1,
             radius=radius,
-            location=world_point + world_normal * radius * rng.uniform(0.34, 0.52),
+            location=world_point + world_normal * radius * rng.uniform(0.30, 0.48),
         )
         particle = bpy.context.object
         particle.name = "REFERENCE_QC71336_FOREIGN_MATERIAL"
@@ -1515,7 +1524,7 @@ def add_foreign_material(
     particle.rotation_euler = world_normal.to_track_quat("Z", "Y").to_euler()
     particle_spin = rng.uniform(0.0, math.tau)
     particle.rotation_euler.rotate_axis("Z", particle_spin)
-    if back_main_plane_override:
+    if use_particle_shape:
         particle.scale = (
             particle.scale.x * rng.uniform(0.86, 1.18),
             particle.scale.y * rng.uniform(0.86, 1.18),
@@ -1539,7 +1548,7 @@ def add_foreign_material(
         "defect_type_internal": "foreign_material",
         "defect_type_canonical": "foreign_material",
         "subtype": subtype,
-        "shape": "ico_particle" if back_main_plane_override else "irregular_flat_chip",
+        "shape": "ico_particle" if use_particle_shape else "irregular_flat_chip",
         "dot_object": particle.name,
         "foreign_object": particle.name,
         "anchor_polygon_index": poly_index,
@@ -1598,6 +1607,7 @@ def add_same_type_foreign_materials(
             depth_scale,
             allowed_sides,
             clear_existing=False,
+            force_stable_particle=True,
         )
         defect["instance_index"] = instance_index
         defects.append(defect)

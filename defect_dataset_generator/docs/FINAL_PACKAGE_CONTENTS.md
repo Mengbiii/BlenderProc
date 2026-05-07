@@ -1,6 +1,6 @@
 # Final Package Contents
 
-Last updated: 2026-05-06
+Last updated: 2026-05-07
 
 This document defines the recommended final packaging scope for the synthetic
 defect dataset project. Keep source code, model assets, and generated datasets
@@ -8,13 +8,14 @@ as separate packages.
 
 ## Package Split
 
-Use three separate deliverables:
+Use separate deliverables:
 
 | Package | Purpose | Include large generated files |
 | --- | --- | --- |
 | Source code package | Reproduce and inspect the generator implementation | No |
 | Model asset package | Provide required `.blend` and `.stl` model files | Yes, model files only |
 | Dataset package | Provide the cleaned generated dataset | Yes, dataset files only |
+| Same-type multi-defect supplement package | Provide optional images with multiple same-type defects per image | Yes, supplement files only |
 
 ## Source Code Package
 
@@ -122,6 +123,51 @@ defect_dataset_generator/outputs/dataset/final_3k_5k_dataset_20260504_auxiliary_
 
 Do not include the auxiliary archive in the primary dataset package unless
 review history is requested.
+
+## Same-Type Multi-Defect Supplement Package
+
+Use the standalone supplement root:
+
+```text
+defect_dataset_generator/outputs/dataset/same_type_multi_defect_supplement_dataset_20260507/
+```
+
+Expected contents:
+
+```text
+images/
+masks/
+labels/
+metadata/
+manifest.csv
+dataset_summary.json
+README_DATASET.md
+```
+
+This package is a supplement to the cleaned 3k-5k dataset, not part of the main
+dataset root. It contains only images where one workpiece has multiple defects
+of the same type.
+
+Current supplement count:
+
+- Total samples: `470`
+- RGB files: `470`
+- Mask files: `470`
+- Label files: `470`
+- Metadata files: `470`
+- YOLO label rows per sample: `2` to `3`
+
+Source roots used to assemble it:
+
+```text
+defect_dataset_generator/outputs/dataset/same_type_multi_defect_supplement_30_each_20260506/
+defect_dataset_generator/outputs/dataset/same_type_multi_defect_balanced_30_total_20260506/
+defect_dataset_generator/outputs/dataset/same_type_multi_defect_topup_small_batches_20260507/
+```
+
+The supplement manifest preserves the original source root and source directory
+for each copied sample. `_backend` folders and single-instance samples were
+excluded during assembly.
 
 ## Exclude From Final Source Package
 
