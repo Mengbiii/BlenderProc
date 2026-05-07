@@ -1,6 +1,6 @@
 # Current Project Handoff
 
-Last updated: 2026-05-06
+Last updated: 2026-05-07
 
 This handoff is for the next maintenance session. The current project is a
 BlenderProc-based synthetic defect dataset generator for plastic workpieces.
@@ -15,6 +15,46 @@ defect_dataset_generator/docs/SYSTEM_USAGE_GUIDE.md
 defect_dataset_generator/docs/NEXT_HANDOFF_2026_05_04.md
 defect_dataset_generator/docs/FINAL_PACKAGE_CONTENTS.md
 ```
+
+## 2026-05-07 Dedicated Script Routing Update
+
+Two target-specific renderer scripts are now available and routed through the
+main CLI for their supported targets:
+
+```text
+defect_dataset_generator/blender_scripts/render_qc71336_gray_defects.py
+defect_dataset_generator/blender_scripts/render_qc75244_black_defects.py
+```
+
+Routing summary:
+
+- `qc71336_gray` single `black_dot` uses
+  `examples/my_project/reference_blend_blackdot_multi_model.py`; single
+  `mixed_color_contamination` uses `render_qc71336_gray_defects.py`.
+- `qc71336_gray` same-scene `black_dot + mixed_color_contamination` now uses
+  `render_qc71336_gray_defects.py`.
+- `qc7_5244_black` single `black_dot`, `foreign_material`, and `splay` now use
+  `render_qc75244_black_defects.py`.
+- `qc7_5244_black` same-scene combinations now use
+  `render_qc75244_black_defects.py`.
+
+The desktop UI cooccurrence dropdown now exposes:
+
+- `qc71336_gray`: `black_dot + mixed_color_contamination`;
+- `qc7_5244_black`: `black_dot + foreign_material`,
+  `black_dot + splay`, `foreign_material + splay`, and
+  `black_dot + foreign_material + splay`.
+
+QC71336 gray note: the single black-dot route was returned to the reference
+black-dot script. The same-scene gray script keeps internal black-dot support
+only for `black_dot + mixed_color_contamination`; that path now samples the
+black-dot anchor from the real mesh surface and embeds it along the surface
+normal. Its support plane follows the reference front/back tabletop placement,
+so the part and defect no longer appear detached from the table in the latest
+smoke sample.
+
+The previous generic routes are still present for other targets. Push and
+release steps should be handled separately after local verification.
 
 ## 2026-05-06 Packaging Update
 
@@ -139,8 +179,8 @@ Active accepted combinations:
 | `p101040_blue` | `black_dot` | front/back where supported by command/profile | `reference_blackdot`; batch-optimized. Spot-check every production block. |
 | `qc71336_black` | `foreign_material`, `splay`, `foreign_material+splay` | front/back | QC71336 black reference backend. Single defects and approved cooccurrence are connected to the dedicated reference script. |
 | `qc71336_white` | `black_dot`, `foreign_material` | front/back | Black dot uses `reference_blackdot`; foreign material uses QC71336 white reference backend. User accepted the previously disputed foreign-material front/back cases. |
-| `qc71336_gray` | `black_dot`, `mixed_color_contamination` | front/back | Black dot uses `reference_blackdot`; mixed color uses generic main-plane. User accepted mixed-color front/back after back-camera logic was corrected. |
-| `qc7_5244_black` | `black_dot`, `foreign_material`, `splay`, `foreign_material+splay` | front/back | Generic main-plane with manual black material profile. User accepted black dot, foreign material, splay, and approved cooccurrence front/back. |
+| `qc71336_gray` | `black_dot`, `mixed_color_contamination`, `black_dot+mixed_color_contamination` | front/back | Single black dot uses `reference_blackdot`; mixed color and same-scene black-dot+mixed-color use the dedicated gray script. The same-scene black dot now uses reference-style mesh-surface anchoring and tabletop support. |
+| `qc7_5244_black` | `black_dot`, `foreign_material`, `splay`, approved same-scene combinations | front/back | Dedicated QC7-5244 black script with manual black material profile. Approved same-scene combinations are black_dot+foreign_material, black_dot+splay, foreign_material+splay, and black_dot+foreign_material+splay. |
 | `qc7_5244_white` | `black_dot`, `mixed_color_contamination` | front/back | Black dot uses `reference_blackdot`; mixed color uses specialized QC75244 mixed-color reference backend. User accepted black-dot back and mixed-color front/back. |
 | `ql3_1052_black` | `foreign_material`, `splay` | front/side only | Generic main-plane using `QL3-black.blend`. User accepted defect appearance after placement bug was fixed. Cooccurrence is cancelled. |
 
@@ -185,10 +225,11 @@ Routing summary:
 | `qc71336_white` | `black_dot` | `reference_blackdot` | `examples/my_project/reference_blend_blackdot_multi_model.py` |
 | `qc71336_white` | `foreign_material` | `qc71336_white_foreign_reference` | `examples/my_project/reference_blend_qc71336_white_prebuilt_normal_debug.py` |
 | `qc71336_gray` | `black_dot` | `reference_blackdot` | `examples/my_project/reference_blend_blackdot_multi_model.py` |
-| `qc71336_gray` | `mixed_color_contamination` | `generic_main_plane` | `defect_dataset_generator/blender_scripts/render_generic_main_plane_defects.py` |
-| `qc7_5244_black` | `black_dot` | `generic_main_plane` | `defect_dataset_generator/blender_scripts/render_generic_main_plane_defects.py` |
-| `qc7_5244_black` | `foreign_material` | `generic_main_plane` | `defect_dataset_generator/blender_scripts/render_generic_main_plane_defects.py` |
-| `qc7_5244_black` | `splay` | `generic_main_plane` | `defect_dataset_generator/blender_scripts/render_generic_main_plane_defects.py` |
+| `qc71336_gray` | `mixed_color_contamination` | `qc71336_gray_dedicated` | `defect_dataset_generator/blender_scripts/render_qc71336_gray_defects.py` |
+| `qc71336_gray` | `black_dot+mixed_color_contamination` | `qc71336_gray_dedicated_cooccurrence` | `defect_dataset_generator/blender_scripts/render_qc71336_gray_defects.py` |
+| `qc7_5244_black` | `black_dot` | `qc75244_black_dedicated` | `defect_dataset_generator/blender_scripts/render_qc75244_black_defects.py` |
+| `qc7_5244_black` | `foreign_material` | `qc75244_black_dedicated` | `defect_dataset_generator/blender_scripts/render_qc75244_black_defects.py` |
+| `qc7_5244_black` | `splay` | `qc75244_black_dedicated` | `defect_dataset_generator/blender_scripts/render_qc75244_black_defects.py` |
 | `qc7_5244_white` | `black_dot` | `reference_blackdot` | `examples/my_project/reference_blend_blackdot_multi_model.py` |
 | `qc7_5244_white` | `mixed_color_contamination` | `qc75244_mixed_color_reference` | `examples/my_project/reference_blend_qc75244_mixed_color_profile_debug.py` |
 | `ql3_1052_black` | `foreign_material` | `generic_main_plane` | `defect_dataset_generator/blender_scripts/render_generic_main_plane_defects.py` |
@@ -229,9 +270,16 @@ Same-scene multi-defect generation exists for generic-equivalent combinations. T
 Current safe scope:
 
 - `qc71336_black` can co-occur `foreign_material` and `splay` through the dedicated QC71336 black reference script. Use `generate-target-cooccurrence --target qc71336_black --defects foreign_material,splay`; it routes to `--defect_type foreign_material_splay`, not generic fallback.
-- `qc7_5244_black` can co-occur `foreign_material` and `splay` through the generic backend.
+- `qc71336_gray` can co-occur `black_dot` and
+  `mixed_color_contamination` through the dedicated gray script. The black dot
+  in this path uses reference-style mesh-surface anchoring rather than
+  bbox-plane placement.
+- `qc7_5244_black` can co-occur `black_dot`, `foreign_material`, and `splay`
+  through the dedicated QC7-5244 black script. Approved combinations are
+  `black_dot+foreign_material`, `black_dot+splay`, `foreign_material+splay`,
+  and `black_dot+foreign_material+splay`.
 - `ql3_1052_black` co-occurrence is cancelled for the current plan. Keep QL3 to single `foreign_material` and single `splay` front/side only.
-- Black-dot-containing cooccurrence is not listed in the current plan and should not be run without new user approval.
+- Only run black-dot-containing cooccurrence for the approved rows above.
 
 Current caution:
 
@@ -350,7 +398,9 @@ Status: implemented for active targets.
 Known issues:
 
 - `qc7_5244_black black_dot` was previously too dark/too high contrast; it was made smaller/lighter and lighting was raised.
-- `qc71336_gray black_dot` had oversized defects; parameters were reduced, but fresh evaluation is required.
+- `qc71336_gray black_dot` single generation uses `reference_blackdot`. In
+  same-scene gray generation, black-dot placement was corrected to use the
+  reference-style surface anchor and embedded placement.
 
 ### `foreign_material`
 
@@ -398,7 +448,10 @@ Status: implemented and smoke-tested on 2026-05-03.
 
 Status: connected; accepted for the currently reviewed targets listed below.
 
-- `qc71336_gray`: generic main-plane. On 2026-05-03 the user manually accepted both front and back samples. The back sample previously rendered mostly background because `GENERIC_REFERENCE_BACKDROP` stayed between the back camera and model; `render_generic_main_plane_defects.py` now repositions the QC71336 gray reference backdrop behind the current camera side and records `view_transform.camera_side=back` for back captures. The accepted back sample may still fail `rgb_defect_bbox_visible`; manual RGB/mask review overrides that automatic visibility failure for this combination.
+- `qc71336_gray`: dedicated gray script. Single mixed-color and same-scene
+  black-dot+mixed-color routes use `render_qc71336_gray_defects.py`; the
+  same-scene route now uses reference-style tabletop support and surface
+  anchoring for the black dot.
 - `qc7_5244_white`: specialized QC75244 mixed-color reference backend. Front/back samples were manually accepted on 2026-05-03.
 
 Known issues:

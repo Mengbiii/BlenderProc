@@ -47,6 +47,7 @@ def parse_args():
     parser.add_argument("--foreign_material_seed", type=int, default=23)
     parser.add_argument("--foreign_material_radius_scale", type=float, default=0.0)
     parser.add_argument("--foreign_material_depth_scale", type=float, default=0.0)
+    parser.add_argument("--defect_count_min", type=int, default=1)
     parser.add_argument("--defect_count_max", type=int, default=1)
     parser.add_argument("--anchor_sides", nargs="+", choices=["front", "back"], default=["front"])
     parser.add_argument("--object_transform_mode", choices=["none", "keep_camera"], default="none")
@@ -1575,9 +1576,14 @@ def add_same_type_foreign_materials(
     radius_scale,
     depth_scale,
     allowed_sides,
+    min_count,
     max_count,
 ):
-    defect_count = random.Random(seed + image_offset).randint(1, max(1, int(max_count)))
+    min_count = max(1, int(min_count))
+    max_count = max(1, int(max_count))
+    if min_count > max_count:
+        raise ValueError("min_count cannot be greater than max_count")
+    defect_count = random.Random(seed + image_offset).randint(min_count, max_count)
     clear_reference_black_dot_objects()
     defects = []
     for instance_index in range(defect_count):
@@ -1603,6 +1609,7 @@ def add_same_type_foreign_materials(
         "defect_type_canonical": "foreign_material",
         "defect_types": ["foreign_material" for _ in defects],
         "defect_count": len(defects),
+        "defect_count_min": int(min_count),
         "defect_count_max": int(max_count),
         "defects": defects,
         "mask_objects": [item["dot_object"] for item in defects if item.get("dot_object")],
@@ -2146,7 +2153,10 @@ def main():
             )
         elif args.enable_foreign_material:
             defect_type = "foreign_material"
+            defect_count_min = max(1, int(args.defect_count_min or 1))
             defect_count_max = max(1, int(args.defect_count_max or 1))
+            if defect_count_min > defect_count_max:
+                raise ValueError("--defect_count_min cannot be greater than --defect_count_max")
             if defect_count_max > 1:
                 defect_info = add_same_type_foreign_materials(
                     imported,
@@ -2158,6 +2168,7 @@ def main():
                     args.foreign_material_radius_scale,
                     args.foreign_material_depth_scale,
                     args.anchor_sides,
+                    defect_count_min,
                     defect_count_max,
                 )
             else:
@@ -2336,6 +2347,7 @@ def main():
         "cycles_samples": args.samples,
         "enable_black_dot": args.enable_black_dot,
         "enable_foreign_material": args.enable_foreign_material,
+        "defect_count_min": max(1, int(args.defect_count_min or 1)),
         "defect_count_max": max(1, int(args.defect_count_max or 1)),
         "gpu_info": gpu_info,
         "lighting": capture_light_summary(),

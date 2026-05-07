@@ -120,6 +120,12 @@ def parse_args():
     parser.add_argument("--anchor_sides", nargs="+", choices=["front", "back"], default=None)
     parser.add_argument("--normal_mode", action="store_true", help="Render normal/no-defect samples with the reference black-dot scene, camera, lighting, and material setup.")
     parser.add_argument(
+        "--black_dot_min_count",
+        type=int,
+        default=1,
+        help="Minimum same-type black-dot defects per image. Defect mode samples a random count in [min, max].",
+    )
+    parser.add_argument(
         "--black_dot_max_count",
         type=int,
         default=1,
@@ -1956,8 +1962,12 @@ def write_notes(output_dir, args, preset):
 
 def main():
     args = parse_args()
+    if args.black_dot_min_count < 1:
+        raise ValueError("--black_dot_min_count must be >= 1")
     if args.black_dot_max_count < 1:
         raise ValueError("--black_dot_max_count must be >= 1")
+    if args.black_dot_min_count > args.black_dot_max_count:
+        raise ValueError("--black_dot_min_count cannot be greater than --black_dot_max_count")
     apply_cli_safe_anchor_window(args)
     preset = MODEL_PRESETS[args.model]
     output_dir = mkdir(Path(args.output).resolve())
@@ -2006,7 +2016,7 @@ def main():
         "render_device": gpu_info,
         "radius_scale_range": radius_range,
         "depth_scale_range": depth_range,
-        "black_dot_count_range": [0, 0] if args.normal_mode else [1, int(args.black_dot_max_count)],
+        "black_dot_count_range": [0, 0] if args.normal_mode else [int(args.black_dot_min_count), int(args.black_dot_max_count)],
         "anchor_sides": allowed_sides,
         "samples": [],
         "failures": [],
@@ -2111,7 +2121,7 @@ def main():
                 print(f"[{accepted:04d}/{args.num:04d}] frame={image_index:06d} normal side={camera_side}")
                 continue
 
-            defect_count = rng.randint(1, int(args.black_dot_max_count))
+            defect_count = rng.randint(int(args.black_dot_min_count), int(args.black_dot_max_count))
             defects = create_black_dot_instances(
                 args.model,
                 objects,

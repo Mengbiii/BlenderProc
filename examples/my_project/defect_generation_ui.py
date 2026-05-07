@@ -35,8 +35,14 @@ BLACK_DOT_PRESETS_PATH = REPO_ROOT / "defect_dataset_generator" / "config" / "bl
 DEFAULT_PYTHON = Path(r"D:\Anaconda\envs\defect_eval\python.exe")
 
 APPROVED_COOCCURRENCE = {
+    "qc71336_gray": [("black_dot", "mixed_color_contamination")],
     "qc71336_black": [("foreign_material", "splay")],
-    "qc7_5244_black": [("foreign_material", "splay")],
+    "qc7_5244_black": [
+        ("black_dot", "foreign_material"),
+        ("black_dot", "splay"),
+        ("foreign_material", "splay"),
+        ("black_dot", "foreign_material", "splay"),
+    ],
 }
 
 TEXT = {
@@ -214,8 +220,10 @@ class DefectGenerationUI:
         root.columnconfigure(1, weight=1)
         root.rowconfigure(0, weight=1)
 
-        left = ttk.LabelFrame(root, text=self.tr("run_setup"), padding=10)
+        left = ttk.LabelFrame(root, text=self.tr("run_setup"), padding=0)
         left.grid(row=0, column=0, sticky="nsw", padx=(0, 10))
+        left.rowconfigure(0, weight=1)
+        left.columnconfigure(0, weight=1)
         center = ttk.LabelFrame(root, text=self.tr("command_log"), padding=10)
         center.grid(row=0, column=1, sticky="nsew", padx=(0, 10))
         center.rowconfigure(3, weight=1)
@@ -226,9 +234,37 @@ class DefectGenerationUI:
         self.text_widgets["command_log_frame"] = center
         self.text_widgets["result_preview_frame"] = right
 
-        self.build_left_panel(left)
+        left_panel = self.build_scrollable_left_panel(left)
+        self.build_left_panel(left_panel)
         self.build_center_panel(center)
         self.build_right_panel(right)
+
+    def build_scrollable_left_panel(self, parent):
+        canvas = tk.Canvas(parent, width=430, highlightthickness=0, borderwidth=0)
+        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.grid(row=0, column=0, sticky="nsew")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        inner = ttk.Frame(canvas, padding=10)
+        window_id = canvas.create_window((0, 0), window=inner, anchor="nw")
+
+        def update_scroll_region(_event=None):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def sync_inner_width(event):
+            canvas.itemconfigure(window_id, width=event.width)
+
+        def on_mousewheel(event):
+            delta = event.delta
+            if delta:
+                canvas.yview_scroll(int(-1 * (delta / 120)), "units")
+
+        inner.bind("<Configure>", update_scroll_region)
+        canvas.bind("<Configure>", sync_inner_width)
+        canvas.bind("<Enter>", lambda _event: canvas.bind_all("<MouseWheel>", on_mousewheel))
+        canvas.bind("<Leave>", lambda _event: canvas.unbind_all("<MouseWheel>"))
+        return inner
 
     def build_left_panel(self, parent):
         self.python_label = ttk.Label(parent, text=self.tr("python"))

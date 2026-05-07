@@ -1,6 +1,6 @@
 # Synthetic Defect Dataset Generator Usage Guide
 
-Last updated: 2026-05-06
+Last updated: 2026-05-07
 
 This guide is the current practical usage document for the BlenderProc-based
 plastic-part defect dataset generator. It is written for the next operator or
@@ -231,6 +231,8 @@ defect_dataset_generator\app.py
 defect_dataset_generator\core\defect_parameter_overrides.py
 defect_dataset_generator\core\renderer.py
 defect_dataset_generator\blender_scripts\render_generic_main_plane_defects.py
+defect_dataset_generator\blender_scripts\render_qc71336_gray_defects.py
+defect_dataset_generator\blender_scripts\render_qc75244_black_defects.py
 defect_dataset_generator\blender_scripts\render_persistent_generic_batch.py
 examples\my_project\reference_blend_blackdot_multi_model.py
 examples\my_project\reference_blend_qc71336_black_prebuilt_normal_debug.py
@@ -260,7 +262,7 @@ plan. Still spot-check every production block.
 | `qc71336_white` | `black_dot` | front/back | `examples/my_project/reference_blend_blackdot_multi_model.py` |
 | `qc71336_gray` | `black_dot` | front/back | `examples/my_project/reference_blend_blackdot_multi_model.py` |
 | `qc7_5244_white` | `black_dot` | front/back | `examples/my_project/reference_blend_blackdot_multi_model.py` |
-| `qc7_5244_black` | `black_dot` | front/back | `defect_dataset_generator/blender_scripts/render_generic_main_plane_defects.py` |
+| `qc7_5244_black` | `black_dot` | front/back | `defect_dataset_generator/blender_scripts/render_qc75244_black_defects.py` |
 
 ### Approved Non-Black Single Defects
 
@@ -269,9 +271,9 @@ plan. Still spot-check every production block.
 | `qc71336_black` | `foreign_material` | front/back | `examples/my_project/reference_blend_qc71336_black_prebuilt_normal_debug.py` |
 | `qc71336_black` | `splay` | front/back | `examples/my_project/reference_blend_qc71336_black_prebuilt_normal_debug.py` |
 | `qc71336_white` | `foreign_material` | front/back | `examples/my_project/reference_blend_qc71336_white_prebuilt_normal_debug.py` |
-| `qc71336_gray` | `mixed_color_contamination` | front/back | `defect_dataset_generator/blender_scripts/render_generic_main_plane_defects.py` |
-| `qc7_5244_black` | `foreign_material` | front/back | `defect_dataset_generator/blender_scripts/render_generic_main_plane_defects.py` |
-| `qc7_5244_black` | `splay` | front/back | `defect_dataset_generator/blender_scripts/render_generic_main_plane_defects.py` |
+| `qc71336_gray` | `mixed_color_contamination` | front/back | `defect_dataset_generator/blender_scripts/render_qc71336_gray_defects.py` |
+| `qc7_5244_black` | `foreign_material` | front/back | `defect_dataset_generator/blender_scripts/render_qc75244_black_defects.py` |
+| `qc7_5244_black` | `splay` | front/back | `defect_dataset_generator/blender_scripts/render_qc75244_black_defects.py` |
 | `qc7_5244_white` | `mixed_color_contamination` | front/back | `examples/my_project/reference_blend_qc75244_mixed_color_profile_debug.py` |
 | `ql3_1052_black` | `foreign_material` | front/side | `defect_dataset_generator/blender_scripts/render_generic_main_plane_defects.py` |
 | `ql3_1052_black` | `splay` | front/side | `defect_dataset_generator/blender_scripts/render_generic_main_plane_defects.py` |
@@ -282,8 +284,12 @@ Only these same-scene combinations are allowed in the UI and current plan:
 
 | Target | Defects | Required sides | Backend/script |
 | --- | --- | --- | --- |
+| `qc71336_gray` | `black_dot,mixed_color_contamination` | front/back | `defect_dataset_generator/blender_scripts/render_qc71336_gray_defects.py` |
 | `qc71336_black` | `foreign_material,splay` | front/back | `examples/my_project/reference_blend_qc71336_black_prebuilt_normal_debug.py` |
-| `qc7_5244_black` | `foreign_material,splay` | front/back | `defect_dataset_generator/blender_scripts/render_generic_main_plane_defects.py` |
+| `qc7_5244_black` | `black_dot,foreign_material` | front/back | `defect_dataset_generator/blender_scripts/render_qc75244_black_defects.py` |
+| `qc7_5244_black` | `black_dot,splay` | front/back | `defect_dataset_generator/blender_scripts/render_qc75244_black_defects.py` |
+| `qc7_5244_black` | `foreign_material,splay` | front/back | `defect_dataset_generator/blender_scripts/render_qc75244_black_defects.py` |
+| `qc7_5244_black` | `black_dot,foreign_material,splay` | front/back | `defect_dataset_generator/blender_scripts/render_qc75244_black_defects.py` |
 
 Do not run:
 
@@ -291,8 +297,13 @@ Do not run:
 ql3_1052_black foreign_material+splay cooccurrence
 ```
 
-Do not include black-dot-containing cooccurrence unless the user explicitly
-reopens and accepts those combinations.
+Only use black-dot-containing cooccurrence for the rows explicitly listed
+above.
+
+QC71336 gray note: single black-dot generation uses the reference black-dot
+script. The same-scene black-dot+mixed-color route uses the dedicated gray
+script and keeps an internal black-dot implementation aligned to the reference
+surface-anchor and tabletop-support behavior.
 
 ## Dataset Construction Policy
 

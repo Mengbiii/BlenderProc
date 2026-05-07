@@ -46,9 +46,9 @@
       "active_defects_current_stage": ["black_dot", "mixed_color_contamination"],
       "deferred_defects": [],
       "single_defect_required": true,
-      "multi_defect_required": false,
-      "multi_defect_modes": [],
-      "current_backend_status": "black_dot_framework_connected_mixed_color_generic_soft_spiral_smoke_ready"
+      "multi_defect_required": true,
+      "multi_defect_modes": ["black_dot+mixed_color_contamination"],
+      "current_backend_status": "reference_blackdot_single_and_dedicated_qc71336_gray_mixed_color_cooccurrence_ready"
     },
     "qc7_5244_black": {
       "model_id": "QC7-5244",
@@ -60,7 +60,7 @@
       "single_defect_required": true,
       "multi_defect_required": true,
       "multi_defect_modes": ["black_dot+foreign_material", "black_dot+splay", "foreign_material+splay", "black_dot+foreign_material+splay"],
-      "current_backend_status": "generic_main_plane_specialized_defects_smoke_ready_manual_material_profile",
+      "current_backend_status": "dedicated_qc75244_black_script_single_and_cooccurrence_ready",
       "geometry_asset": "assets/models/QC7-5236.stl",
       "geometry_asset_note": "QC7-5236.stl is the geometry asset currently used for the QC7-5244 target. It has no accepted authored material; target material must be built from the QC7-5244 profile/script.",
       "default_material_profile": "qc7_5244_black_manual_v3",

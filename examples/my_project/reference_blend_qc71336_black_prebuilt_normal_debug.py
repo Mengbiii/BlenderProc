@@ -50,6 +50,7 @@ def parse_args():
         help="Reference-scene defect type to generate.",
     )
     parser.add_argument("--defect_seed", type=int, default=23)
+    parser.add_argument("--defect_count_min", type=int, default=1)
     parser.add_argument("--defect_count_max", type=int, default=1)
     parser.add_argument("--anchor_sides", nargs="+", choices=["front", "back"], default=["front"])
     parser.add_argument("--debug_splay_strong", action="store_true")
@@ -1956,8 +1957,12 @@ def add_foreign_material_splay_cooccurrence(imported_objects, material_info, max
     }
 
 
-def add_same_type_multi_defects(imported_objects, material_info, max_dim, image_offset, seed, defect_type, max_count, strong=False):
-    defect_count = random.Random(seed + image_offset).randint(1, max(1, int(max_count)))
+def add_same_type_multi_defects(imported_objects, material_info, max_dim, image_offset, seed, defect_type, min_count, max_count, strong=False):
+    min_count = max(1, int(min_count))
+    max_count = max(1, int(max_count))
+    if min_count > max_count:
+        raise ValueError("min_count cannot be greater than max_count")
+    defect_count = random.Random(seed + image_offset).randint(min_count, max_count)
     defects = []
     for instance_index in range(defect_count):
         instance_offset = image_offset + instance_index * 10000
@@ -1987,6 +1992,7 @@ def add_same_type_multi_defects(imported_objects, material_info, max_dim, image_
         "defect_type_canonical": defect_type,
         "defect_types": [defect_type for _ in defects],
         "defect_count": len(defects),
+        "defect_count_min": int(min_count),
         "defect_count_max": int(max_count),
         "defects": defects,
         "mask_objects": mask_objects,
@@ -2504,7 +2510,10 @@ def main():
         clear_reference_generated_defect_objects()
         restore_object_materials(imported, material_templates)
         defect_info = None
+        defect_count_min = max(1, int(args.defect_count_min or 1))
         defect_count_max = max(1, int(args.defect_count_max or 1))
+        if defect_count_min > defect_count_max:
+            raise ValueError("--defect_count_min cannot be greater than --defect_count_max")
         if args.defect_type in {"foreign_material", "splay"} and defect_count_max > 1:
             defect_info = add_same_type_multi_defects(
                 imported,
@@ -2513,6 +2522,7 @@ def main():
                 image_offset,
                 args.defect_seed,
                 args.defect_type,
+                defect_count_min,
                 defect_count_max,
                 strong=args.debug_splay_strong,
             )
@@ -2694,6 +2704,7 @@ def main():
         "render_height": args.height,
         "cycles_samples": args.samples,
         "defect_seed": args.defect_seed,
+        "defect_count_min": max(1, int(args.defect_count_min or 1)),
         "defect_count_max": max(1, int(args.defect_count_max or 1)),
         "debug_splay_strong": bool(args.debug_splay_strong),
         "gpu_info": gpu_info,

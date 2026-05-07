@@ -57,8 +57,8 @@
       "material_source": {"mode": "qc71336_gray_reference_override"},
       "preferred_backends": {
         "black_dot": "reference_blackdot",
-        "mixed_color_contamination": "generic_main_plane",
-        "default": "generic_main_plane"
+        "mixed_color_contamination": "qc71336_gray_dedicated",
+        "default": "qc71336_gray_dedicated"
       },
       "supported_defects": ["black_dot", "mixed_color_contamination"],
       "default_anchor_sides": ["front", "back"],
@@ -71,10 +71,10 @@
       "stl_path": "assets/models/QC7-5236.stl",
       "material_source": {"mode": "manual_profile", "path": "defect_dataset_generator/config/qc7_5244_black_visual_material_candidate_v3.json"},
       "preferred_backends": {
-        "black_dot": "generic_main_plane",
-        "foreign_material": "generic_main_plane",
-        "splay": "generic_main_plane",
-        "default": "generic_main_plane"
+        "black_dot": "qc75244_black_dedicated",
+        "foreign_material": "qc75244_black_dedicated",
+        "splay": "qc75244_black_dedicated",
+        "default": "qc75244_black_dedicated"
       },
       "supported_defects": ["black_dot", "foreign_material", "splay"],
       "default_anchor_sides": ["back"],

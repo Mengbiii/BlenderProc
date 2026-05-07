@@ -13,6 +13,7 @@ GENERIC_PARAMETERS = {
     "height_multiplier",
     "size_scale",
     "roughness",
+    "defect_count_min",
     "defect_count_max",
 }
 REFERENCE_BLACKDOT_PARAMETERS = {
@@ -20,14 +21,16 @@ REFERENCE_BLACKDOT_PARAMETERS = {
     "black_dot_radius_max_scale",
     "black_dot_depth_min_scale",
     "black_dot_depth_max_scale",
+    "black_dot_min_count",
     "black_dot_max_count",
 }
 QC71336_WHITE_FOREIGN_PARAMETERS = {
     "foreign_material_radius_scale",
     "foreign_material_depth_scale",
+    "defect_count_min",
     "defect_count_max",
 }
-SAME_TYPE_COUNT_PARAMETERS = {"defect_count_max"}
+SAME_TYPE_COUNT_PARAMETERS = {"defect_count_min", "defect_count_max"}
 
 
 def load_defect_parameter_overrides(path_value, target_id, requested_defects, mode):
@@ -135,11 +138,13 @@ def _validate_range(key, value):
         "height_multiplier": (0.05, 20.0),
         "size_scale": (0.1, 5.0),
         "roughness": (0.0, 1.0),
+        "defect_count_min": (1.0, 10.0),
         "defect_count_max": (1.0, 10.0),
         "black_dot_radius_min_scale": (0.0001, 0.05),
         "black_dot_radius_max_scale": (0.0001, 0.05),
         "black_dot_depth_min_scale": (0.0001, 0.2),
         "black_dot_depth_max_scale": (0.0001, 0.2),
+        "black_dot_min_count": (1.0, 10.0),
         "black_dot_max_count": (1.0, 10.0),
         "foreign_material_radius_scale": (0.0, 0.05),
         "foreign_material_depth_scale": (0.0, 0.2),

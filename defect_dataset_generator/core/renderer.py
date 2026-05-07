@@ -85,13 +85,18 @@ def run_reference_blackdot_backend(
     object_transform_camera_side="front",
     object_rotate_deg=None,
     object_translate=None,
+    defect_count_min=1,
     defect_count_max=1,
     dry_run=False,
 ):
     if count < 1:
         raise ValueError("--count must be >= 1")
+    if int(defect_count_min or 1) < 1:
+        raise ValueError("--defect-count-min must be >= 1")
     if int(defect_count_max or 1) < 1:
         raise ValueError("--defect-count-max must be >= 1")
+    if int(defect_count_min or 1) > int(defect_count_max or 1):
+        raise ValueError("--defect-count-min cannot be greater than --defect-count-max")
     normalized_defects = normalize_defect_config(defect_config)
     backend_defect_config = _blackdot_only_defect_config(normalized_defects)
     backend_script = project_root / "examples" / "my_project" / "reference_blend_blackdot_multi_model.py"
@@ -134,6 +139,7 @@ def run_reference_blackdot_backend(
         object_transform_camera_side=object_transform_camera_side,
         object_rotate_deg=object_rotate_deg,
         object_translate=object_translate,
+        defect_count_min=defect_count_min,
         defect_count_max=defect_count_max,
     )
     commands = [batch_command]
@@ -292,17 +298,27 @@ def run_generic_main_plane_backend(
     object_rotate_deg=None,
     object_translate=None,
     defect_parameter_overrides=None,
+    defect_count_min=1,
     defect_count_max=1,
+    backend_script=None,
+    backend_name="generic_main_plane",
+    raw_backend_name="generic_main_plane",
     dry_run=False,
 ):
     if count < 1:
         raise ValueError("--count must be >= 1")
+    if int(defect_count_min or 1) < 1:
+        raise ValueError("--defect-count-min must be >= 1")
     if int(defect_count_max or 1) < 1:
         raise ValueError("--defect-count-max must be >= 1")
+    if int(defect_count_min or 1) > int(defect_count_max or 1):
+        raise ValueError("--defect-count-min cannot be greater than --defect-count-max")
     anchor_sides = anchor_sides or target_profile.get("default_anchor_sides") or ["front", "back"]
-    backend_script = project_root / "defect_dataset_generator" / "blender_scripts" / "render_generic_main_plane_defects.py"
+    if backend_script is None:
+        backend_script = project_root / "defect_dataset_generator" / "blender_scripts" / "render_generic_main_plane_defects.py"
+    backend_script = Path(backend_script)
     blenderproc_cli = project_root / "cli.py"
-    raw_output_dir = output_dir / "_backend" / "generic_main_plane"
+    raw_output_dir = output_dir / "_backend" / raw_backend_name
     raw_output_dir.mkdir(parents=True, exist_ok=True)
     _ensure_framework_output_dirs(output_dir)
     command = [
@@ -358,6 +374,8 @@ def run_generic_main_plane_backend(
     if defect_params_path:
         command.extend(["--defect_params_json", str(defect_params_path)])
     if int(defect_count_max or 1) > 1:
+        if int(defect_count_min or 1) > 1:
+            command.extend(["--defect_count_min", str(int(defect_count_min))])
         command.extend(["--defect_count_max", str(int(defect_count_max))])
 
     log = {
@@ -371,6 +389,7 @@ def run_generic_main_plane_backend(
         "object_rotate_deg": object_rotate_deg,
         "object_translate": object_translate,
         "defect_parameter_overrides": defect_parameter_overrides or {},
+        "defect_count_min": int(defect_count_min or 1),
         "defect_count_max": int(defect_count_max or 1),
         "command": command,
         "dry_run": bool(dry_run),
@@ -391,6 +410,7 @@ def run_generic_main_plane_backend(
             seed=seed,
             anchor_sides=anchor_sides,
             samples_requested=samples,
+            backend_name=backend_name,
         )
         write_json(output_dir / "backend_run_log.json", log)
         write_json(output_dir / "generation_plan.json", plan)
@@ -407,7 +427,7 @@ def run_generic_main_plane_backend(
     log["returncode"] = completed.returncode
     log["stdout"] = completed.stdout
     if completed.returncode != 0:
-        log["failure_reason"] = "generic backend returned {0}".format(completed.returncode)
+        log["failure_reason"] = "{0} backend returned {1}".format(backend_name, completed.returncode)
         write_json(output_dir / "backend_run_log.json", log)
         plan = _build_generic_backend_plan(
             status="failed",
@@ -423,6 +443,7 @@ def run_generic_main_plane_backend(
             seed=seed,
             anchor_sides=anchor_sides,
             samples_requested=samples,
+            backend_name=backend_name,
         )
         write_json(output_dir / "generation_plan.json", plan)
         write_dataset_summary(output_dir / "dataset_summary.json", plan)
@@ -477,6 +498,7 @@ def run_generic_main_plane_backend(
         seed=seed,
         anchor_sides=anchor_sides,
         samples_requested=samples,
+        backend_name=backend_name,
     )
     write_json(output_dir / "generation_plan.json", plan)
     write_dataset_summary(output_dir / "dataset_summary.json", plan)
@@ -499,6 +521,8 @@ def run_generic_cooccurrence_backend(
     object_translate=None,
     defect_parameter_overrides=None,
     render_class_masks=False,
+    backend_script=None,
+    backend_name="generic_main_plane_cooccurrence",
     dry_run=False,
 ):
     if count < 1:
@@ -506,7 +530,9 @@ def run_generic_cooccurrence_backend(
     if not defect_types:
         raise ValueError("--defects must include at least one defect type")
     anchor_sides = anchor_sides or target_profile.get("default_anchor_sides") or ["front", "back"]
-    backend_script = project_root / "defect_dataset_generator" / "blender_scripts" / "render_generic_main_plane_defects.py"
+    if backend_script is None:
+        backend_script = project_root / "defect_dataset_generator" / "blender_scripts" / "render_generic_main_plane_defects.py"
+    backend_script = Path(backend_script)
     blenderproc_cli = project_root / "cli.py"
     output_dir.mkdir(parents=True, exist_ok=True)
     output_dirs = ["rgb", "masks", "mask", "labels_yolo", "metadata"]
@@ -592,8 +618,8 @@ def run_generic_cooccurrence_backend(
         "target_profile": target_profile,
         "defect_types": defect_types,
         "defect_generation_logic": {
-            "backend": "generic_main_plane_cooccurrence",
-            "shared_single_generic_function": "render_generic_main_plane_defects.create_defect",
+            "backend": backend_name,
+            "shared_single_generic_function": "{0}.create_defect".format(backend_script.stem),
             "position_resampling_only": True,
             "note": "Each defect object is created by the same generic create_defect() used by generic single-defect generation; cooccurrence only repeats sampling to avoid excessive overlap.",
         },
@@ -625,6 +651,7 @@ def run_generic_cooccurrence_backend(
             seed=seed,
             anchor_sides=anchor_sides,
             samples_requested=samples,
+            backend_name=backend_name,
         )
         write_json(output_dir / "backend_run_log.json", log)
         write_json(output_dir / "generation_plan.json", plan)
@@ -641,7 +668,7 @@ def run_generic_cooccurrence_backend(
     log["returncode"] = completed.returncode
     log["stdout"] = completed.stdout
     if completed.returncode != 0:
-        log["failure_reason"] = "generic cooccurrence backend returned {0}".format(completed.returncode)
+        log["failure_reason"] = "{0} backend returned {1}".format(backend_name, completed.returncode)
         write_json(output_dir / "backend_run_log.json", log)
         plan = _build_generic_cooccurrence_plan(
             status="failed",
@@ -656,6 +683,7 @@ def run_generic_cooccurrence_backend(
             seed=seed,
             anchor_sides=anchor_sides,
             samples_requested=samples,
+            backend_name=backend_name,
         )
         write_json(output_dir / "generation_plan.json", plan)
         write_dataset_summary(output_dir / "dataset_summary.json", plan)
@@ -703,10 +731,177 @@ def run_generic_cooccurrence_backend(
         seed=seed,
         anchor_sides=anchor_sides,
         samples_requested=samples,
+        backend_name=backend_name,
     )
     write_json(output_dir / "generation_plan.json", plan)
     write_dataset_summary(output_dir / "dataset_summary.json", plan)
     return plan
+
+
+def run_qc71336_gray_dedicated_backend(
+    project_root,
+    python_executable,
+    target_profile,
+    defect_type,
+    count,
+    output_dir,
+    samples=32,
+    seed=100,
+    anchor_sides=None,
+    object_transform_mode="none",
+    object_transform_camera_side="front",
+    object_rotate_deg=None,
+    object_translate=None,
+    defect_parameter_overrides=None,
+    defect_count_min=1,
+    defect_count_max=1,
+    dry_run=False,
+):
+    return run_generic_main_plane_backend(
+        project_root=project_root,
+        python_executable=python_executable,
+        target_profile=target_profile,
+        defect_type=defect_type,
+        count=count,
+        output_dir=output_dir,
+        samples=samples,
+        seed=seed,
+        anchor_sides=anchor_sides,
+        object_transform_mode=object_transform_mode,
+        object_transform_camera_side=object_transform_camera_side,
+        object_rotate_deg=object_rotate_deg,
+        object_translate=object_translate,
+        defect_parameter_overrides=defect_parameter_overrides,
+        defect_count_min=defect_count_min,
+        defect_count_max=defect_count_max,
+        backend_script=project_root / "defect_dataset_generator" / "blender_scripts" / "render_qc71336_gray_defects.py",
+        backend_name="qc71336_gray_dedicated",
+        raw_backend_name="qc71336_gray_dedicated",
+        dry_run=dry_run,
+    )
+
+
+def run_qc75244_black_dedicated_backend(
+    project_root,
+    python_executable,
+    target_profile,
+    defect_type,
+    count,
+    output_dir,
+    samples=32,
+    seed=100,
+    anchor_sides=None,
+    object_transform_mode="none",
+    object_transform_camera_side="front",
+    object_rotate_deg=None,
+    object_translate=None,
+    defect_parameter_overrides=None,
+    defect_count_min=1,
+    defect_count_max=1,
+    dry_run=False,
+):
+    return run_generic_main_plane_backend(
+        project_root=project_root,
+        python_executable=python_executable,
+        target_profile=target_profile,
+        defect_type=defect_type,
+        count=count,
+        output_dir=output_dir,
+        samples=samples,
+        seed=seed,
+        anchor_sides=anchor_sides,
+        object_transform_mode=object_transform_mode,
+        object_transform_camera_side=object_transform_camera_side,
+        object_rotate_deg=object_rotate_deg,
+        object_translate=object_translate,
+        defect_parameter_overrides=defect_parameter_overrides,
+        defect_count_min=defect_count_min,
+        defect_count_max=defect_count_max,
+        backend_script=project_root / "defect_dataset_generator" / "blender_scripts" / "render_qc75244_black_defects.py",
+        backend_name="qc75244_black_dedicated",
+        raw_backend_name="qc75244_black_dedicated",
+        dry_run=dry_run,
+    )
+
+
+def run_qc71336_gray_dedicated_cooccurrence_backend(
+    project_root,
+    python_executable,
+    target_profile,
+    defect_types,
+    count,
+    output_dir,
+    samples=32,
+    seed=100,
+    anchor_sides=None,
+    object_transform_mode="none",
+    object_transform_camera_side="front",
+    object_rotate_deg=None,
+    object_translate=None,
+    defect_parameter_overrides=None,
+    render_class_masks=False,
+    dry_run=False,
+):
+    return run_generic_cooccurrence_backend(
+        project_root=project_root,
+        python_executable=python_executable,
+        target_profile=target_profile,
+        defect_types=defect_types,
+        count=count,
+        output_dir=output_dir,
+        samples=samples,
+        seed=seed,
+        anchor_sides=anchor_sides,
+        object_transform_mode=object_transform_mode,
+        object_transform_camera_side=object_transform_camera_side,
+        object_rotate_deg=object_rotate_deg,
+        object_translate=object_translate,
+        defect_parameter_overrides=defect_parameter_overrides,
+        render_class_masks=render_class_masks,
+        backend_script=project_root / "defect_dataset_generator" / "blender_scripts" / "render_qc71336_gray_defects.py",
+        backend_name="qc71336_gray_dedicated_cooccurrence",
+        dry_run=dry_run,
+    )
+
+
+def run_qc75244_black_dedicated_cooccurrence_backend(
+    project_root,
+    python_executable,
+    target_profile,
+    defect_types,
+    count,
+    output_dir,
+    samples=32,
+    seed=100,
+    anchor_sides=None,
+    object_transform_mode="none",
+    object_transform_camera_side="front",
+    object_rotate_deg=None,
+    object_translate=None,
+    defect_parameter_overrides=None,
+    render_class_masks=False,
+    dry_run=False,
+):
+    return run_generic_cooccurrence_backend(
+        project_root=project_root,
+        python_executable=python_executable,
+        target_profile=target_profile,
+        defect_types=defect_types,
+        count=count,
+        output_dir=output_dir,
+        samples=samples,
+        seed=seed,
+        anchor_sides=anchor_sides,
+        object_transform_mode=object_transform_mode,
+        object_transform_camera_side=object_transform_camera_side,
+        object_rotate_deg=object_rotate_deg,
+        object_translate=object_translate,
+        defect_parameter_overrides=defect_parameter_overrides,
+        render_class_masks=render_class_masks,
+        backend_script=project_root / "defect_dataset_generator" / "blender_scripts" / "render_qc75244_black_defects.py",
+        backend_name="qc75244_black_dedicated_cooccurrence",
+        dry_run=dry_run,
+    )
 
 
 def run_generic_normal_backend(
@@ -1234,11 +1429,16 @@ def run_qc71336_black_reference_backend(
     object_rotate_deg=None,
     object_translate=None,
     defect_parameter_overrides=None,
+    defect_count_min=1,
     defect_count_max=1,
     dry_run=False,
 ):
+    if int(defect_count_min or 1) < 1:
+        raise ValueError("--defect-count-min must be >= 1")
     if int(defect_count_max or 1) < 1:
         raise ValueError("--defect-count-max must be >= 1")
+    if int(defect_count_min or 1) > int(defect_count_max or 1):
+        raise ValueError("--defect-count-min cannot be greater than --defect-count-max")
     anchor_sides = anchor_sides or target_profile.get("default_anchor_sides") or ["front"]
     backend_script = project_root / "examples" / "my_project" / "reference_blend_qc71336_black_prebuilt_normal_debug.py"
     blenderproc_cli = project_root / "cli.py"
@@ -1271,6 +1471,8 @@ def run_qc71336_black_reference_backend(
     ]
     command.extend(anchor_sides)
     if int(defect_count_max or 1) > 1:
+        if int(defect_count_min or 1) > 1:
+            command.extend(["--defect_count_min", str(int(defect_count_min))])
         command.extend(["--defect_count_max", str(int(defect_count_max))])
     _append_object_transform_args(command, object_transform_mode, object_transform_camera_side, object_rotate_deg, object_translate)
     return _run_reference_style_backend(
@@ -1304,11 +1506,16 @@ def run_qc71336_white_foreign_reference_backend(
     object_rotate_deg=None,
     object_translate=None,
     defect_parameter_overrides=None,
+    defect_count_min=1,
     defect_count_max=1,
     dry_run=False,
 ):
+    if int(defect_count_min or 1) < 1:
+        raise ValueError("--defect-count-min must be >= 1")
     if int(defect_count_max or 1) < 1:
         raise ValueError("--defect-count-max must be >= 1")
+    if int(defect_count_min or 1) > int(defect_count_max or 1):
+        raise ValueError("--defect-count-min cannot be greater than --defect-count-max")
     anchor_sides = anchor_sides or target_profile.get("default_anchor_sides") or ["front"]
     backend_script = project_root / "examples" / "my_project" / "reference_blend_qc71336_white_prebuilt_normal_debug.py"
     blenderproc_cli = project_root / "cli.py"
@@ -1340,6 +1547,8 @@ def run_qc71336_white_foreign_reference_backend(
     ]
     command.extend(anchor_sides)
     if int(defect_count_max or 1) > 1:
+        if int(defect_count_min or 1) > 1:
+            command.extend(["--defect_count_min", str(int(defect_count_min))])
         command.extend(["--defect_count_max", str(int(defect_count_max))])
     if defect_parameter_overrides:
         if "foreign_material_radius_scale" in defect_parameter_overrides:
@@ -1377,11 +1586,16 @@ def run_qc75244_mixed_color_reference_backend(
     object_transform_camera_side="front",
     object_rotate_deg=None,
     object_translate=None,
+    defect_count_min=1,
     defect_count_max=1,
     dry_run=False,
 ):
+    if int(defect_count_min or 1) < 1:
+        raise ValueError("--defect-count-min must be >= 1")
     if int(defect_count_max or 1) < 1:
         raise ValueError("--defect-count-max must be >= 1")
+    if int(defect_count_min or 1) > int(defect_count_max or 1):
+        raise ValueError("--defect-count-min cannot be greater than --defect-count-max")
     anchor_sides = anchor_sides or target_profile.get("default_anchor_sides") or ["front"]
     backend_script = project_root / "examples" / "my_project" / "reference_blend_qc75244_mixed_color_profile_debug.py"
     blenderproc_cli = project_root / "cli.py"
@@ -1413,6 +1627,8 @@ def run_qc75244_mixed_color_reference_backend(
     ]
     command.extend(anchor_sides)
     if int(defect_count_max or 1) > 1:
+        if int(defect_count_min or 1) > 1:
+            command.extend(["--defect_count_min", str(int(defect_count_min))])
         command.extend(["--defect_count_max", str(int(defect_count_max))])
     _append_object_transform_args(command, object_transform_mode, object_transform_camera_side, object_rotate_deg, object_translate)
     return _run_reference_style_backend(
@@ -2349,6 +2565,7 @@ def _build_reference_blackdot_command(
     object_rotate_deg=None,
     object_translate=None,
     normal_mode=False,
+    defect_count_min=1,
     defect_count_max=1,
 ):
     command = [
@@ -2379,6 +2596,8 @@ def _build_reference_blackdot_command(
     if normal_mode:
         command.append("--normal_mode")
     elif int(defect_count_max or 1) > 1:
+        if int(defect_count_min or 1) > 1:
+            command.extend(["--black_dot_min_count", str(int(defect_count_min))])
         command.extend(["--black_dot_max_count", str(int(defect_count_max))])
     _append_object_transform_args(command, object_transform_mode, object_transform_camera_side, object_rotate_deg, object_translate)
     backend_params = _extract_blackdot_backend_parameters(defect_config or {})
@@ -2387,11 +2606,12 @@ def _build_reference_blackdot_command(
         "black_dot_radius_max_scale": "--black_dot_radius_max_scale",
         "black_dot_depth_min_scale": "--black_dot_depth_min_scale",
         "black_dot_depth_max_scale": "--black_dot_depth_max_scale",
+        "black_dot_min_count": "--black_dot_min_count",
         "black_dot_max_count": "--black_dot_max_count",
     }
     for key, flag in mapping.items():
         if key in backend_params and backend_params[key] is not None:
-            value = int(backend_params[key]) if key == "black_dot_max_count" else backend_params[key]
+            value = int(backend_params[key]) if key in {"black_dot_min_count", "black_dot_max_count"} else backend_params[key]
             command.extend([flag, str(value)])
     return command
 
@@ -2529,10 +2749,11 @@ def _build_generic_cooccurrence_plan(
     seed,
     anchor_sides,
     samples_requested,
+    backend_name="generic_main_plane_cooccurrence",
 ):
     return {
         "status": status,
-        "backend": "generic_main_plane_cooccurrence",
+        "backend": backend_name,
         "backend_script": str(backend_script),
         "commands": [command],
         "output_dir": str(output_dir),
@@ -2551,8 +2772,8 @@ def _build_generic_cooccurrence_plan(
         "placement_policy": target_profile.get("placement_policy", "front_back_main_planes_only"),
         "material_source": target_profile.get("material_source"),
         "defect_generation_logic": {
-            "backend": "generic_main_plane_cooccurrence",
-            "shared_single_generic_function": "render_generic_main_plane_defects.create_defect",
+            "backend": backend_name,
+            "shared_single_generic_function": "{0}.create_defect".format(Path(backend_script).stem),
             "position_resampling_only": True,
         },
         "camera": build_camera_settings("randomized"),

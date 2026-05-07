@@ -27,7 +27,11 @@ from core.renderer import (
     run_generic_normal_backend,
     run_persistent_generic_batch_backend,
     run_qc71336_black_reference_backend,
+    run_qc71336_gray_dedicated_backend,
+    run_qc71336_gray_dedicated_cooccurrence_backend,
     run_qc71336_white_foreign_reference_backend,
+    run_qc75244_black_dedicated_backend,
+    run_qc75244_black_dedicated_cooccurrence_backend,
     run_qc75244_mixed_color_reference_backend,
     run_reference_blackdot_backend,
 )
@@ -217,6 +221,10 @@ def cmd_plan_defects(args: argparse.Namespace) -> int:
 def cmd_generate_target(args: argparse.Namespace) -> int:
     if args.defect_count_max < 1:
         raise ValueError("--defect-count-max must be >= 1")
+    if args.defect_count_min < 1:
+        raise ValueError("--defect-count-min must be >= 1")
+    if args.defect_count_min > args.defect_count_max:
+        raise ValueError("--defect-count-min cannot be greater than --defect-count-max")
     target_profile = get_model_color_profile(args.target)
     requested_defects = [item.strip() for item in args.defects.split(",") if item.strip()]
     if not requested_defects:
@@ -254,6 +262,7 @@ def cmd_generate_target(args: argparse.Namespace) -> int:
             object_rotate_deg=args.object_rotate_deg,
             object_translate=args.object_translate,
             defect_parameter_overrides=defect_parameter_overrides.get(defect_type, {}),
+            defect_count_min=args.defect_count_min,
             defect_count_max=args.defect_count_max,
             dry_run=args.dry_run,
         )
@@ -266,6 +275,7 @@ def cmd_generate_target(args: argparse.Namespace) -> int:
         "target_profile": target_profile,
         "requested_defects": requested_defects,
         "defect_parameter_overrides": defect_parameter_overrides,
+        "defect_count_min": args.defect_count_min,
         "defect_count_max": args.defect_count_max,
         "count_per_defect": args.count,
         "output_dir": str(out_dir),
@@ -323,6 +333,44 @@ def cmd_generate_target_cooccurrence(args: argparse.Namespace) -> int:
             object_rotate_deg=args.object_rotate_deg,
             object_translate=args.object_translate,
             defect_parameter_overrides=defect_parameter_overrides,
+            dry_run=args.dry_run,
+        )
+    elif backend_equivalence["cooccurrence_backend"] == "qc71336_gray_dedicated_cooccurrence":
+        plan = run_qc71336_gray_dedicated_cooccurrence_backend(
+            project_root=PROJECT_ROOT,
+            python_executable=Path(sys.executable),
+            target_profile=target_profile,
+            defect_types=requested_defects,
+            count=args.count,
+            output_dir=out_dir,
+            samples=args.samples,
+            seed=args.seed,
+            anchor_sides=args.anchor_sides,
+            object_transform_mode=args.object_transform_mode,
+            object_transform_camera_side=args.object_transform_camera_side,
+            object_rotate_deg=args.object_rotate_deg,
+            object_translate=args.object_translate,
+            defect_parameter_overrides=defect_parameter_overrides,
+            render_class_masks=args.render_class_masks,
+            dry_run=args.dry_run,
+        )
+    elif backend_equivalence["cooccurrence_backend"] == "qc75244_black_dedicated_cooccurrence":
+        plan = run_qc75244_black_dedicated_cooccurrence_backend(
+            project_root=PROJECT_ROOT,
+            python_executable=Path(sys.executable),
+            target_profile=target_profile,
+            defect_types=requested_defects,
+            count=args.count,
+            output_dir=out_dir,
+            samples=args.samples,
+            seed=args.seed,
+            anchor_sides=args.anchor_sides,
+            object_transform_mode=args.object_transform_mode,
+            object_transform_camera_side=args.object_transform_camera_side,
+            object_rotate_deg=args.object_rotate_deg,
+            object_translate=args.object_translate,
+            defect_parameter_overrides=defect_parameter_overrides,
+            render_class_masks=args.render_class_masks,
             dry_run=args.dry_run,
         )
     else:
@@ -457,12 +505,56 @@ def _run_target_defect_backend(
     object_rotate_deg,
     object_translate,
     defect_parameter_overrides,
+    defect_count_min,
     defect_count_max,
     dry_run,
 ):
     target_id = target_profile["target_id"]
     backend_name = _target_defect_backend_name(target_profile, defect_type)
+    effective_defect_count_min = _effective_defect_count_min(defect_count_min, defect_parameter_overrides)
     effective_defect_count_max = _effective_defect_count_max(defect_count_max, defect_parameter_overrides)
+    if effective_defect_count_min > effective_defect_count_max:
+        raise ValueError("effective defect count min cannot be greater than max")
+    if backend_name == "qc71336_gray_dedicated":
+        return run_qc71336_gray_dedicated_backend(
+            project_root=PROJECT_ROOT,
+            python_executable=Path(sys.executable),
+            target_profile=target_profile,
+            defect_type=defect_type,
+            count=count,
+            output_dir=output_dir,
+            samples=samples,
+            seed=seed,
+            anchor_sides=anchor_sides,
+            object_transform_mode=object_transform_mode,
+            object_transform_camera_side=object_transform_camera_side,
+            object_rotate_deg=object_rotate_deg,
+            object_translate=object_translate,
+            defect_parameter_overrides=defect_parameter_overrides,
+            defect_count_min=effective_defect_count_min,
+            defect_count_max=effective_defect_count_max,
+            dry_run=dry_run,
+        )
+    if backend_name == "qc75244_black_dedicated":
+        return run_qc75244_black_dedicated_backend(
+            project_root=PROJECT_ROOT,
+            python_executable=Path(sys.executable),
+            target_profile=target_profile,
+            defect_type=defect_type,
+            count=count,
+            output_dir=output_dir,
+            samples=samples,
+            seed=seed,
+            anchor_sides=anchor_sides,
+            object_transform_mode=object_transform_mode,
+            object_transform_camera_side=object_transform_camera_side,
+            object_rotate_deg=object_rotate_deg,
+            object_translate=object_translate,
+            defect_parameter_overrides=defect_parameter_overrides,
+            defect_count_min=effective_defect_count_min,
+            defect_count_max=effective_defect_count_max,
+            dry_run=dry_run,
+        )
     if defect_type == "black_dot":
         backend_model = _blackdot_backend_model(target_id)
         if backend_model is not None:
@@ -487,6 +579,7 @@ def _run_target_defect_backend(
                 object_transform_camera_side=object_transform_camera_side,
                 object_rotate_deg=object_rotate_deg,
                 object_translate=object_translate,
+                defect_count_min=effective_defect_count_min,
                 defect_count_max=effective_defect_count_max,
                 dry_run=dry_run,
             )
@@ -506,6 +599,7 @@ def _run_target_defect_backend(
             object_rotate_deg=object_rotate_deg,
             object_translate=object_translate,
             defect_parameter_overrides=defect_parameter_overrides,
+            defect_count_min=effective_defect_count_min,
             defect_count_max=effective_defect_count_max,
             dry_run=dry_run,
         )
@@ -524,6 +618,7 @@ def _run_target_defect_backend(
             object_rotate_deg=object_rotate_deg,
             object_translate=object_translate,
             defect_parameter_overrides=defect_parameter_overrides,
+            defect_count_min=effective_defect_count_min,
             defect_count_max=effective_defect_count_max,
             dry_run=dry_run,
         )
@@ -541,6 +636,7 @@ def _run_target_defect_backend(
             object_transform_camera_side=object_transform_camera_side,
             object_rotate_deg=object_rotate_deg,
             object_translate=object_translate,
+            defect_count_min=effective_defect_count_min,
             defect_count_max=effective_defect_count_max,
             dry_run=dry_run,
         )
@@ -559,9 +655,16 @@ def _run_target_defect_backend(
         object_rotate_deg=object_rotate_deg,
         object_translate=object_translate,
         defect_parameter_overrides=defect_parameter_overrides,
+        defect_count_min=effective_defect_count_min,
         defect_count_max=effective_defect_count_max,
         dry_run=dry_run,
     )
+
+
+def _effective_defect_count_min(cli_value, defect_parameter_overrides):
+    overrides = defect_parameter_overrides or {}
+    value = overrides.get("defect_count_min", overrides.get("black_dot_min_count", cli_value))
+    return max(1, int(round(float(value))))
 
 
 def _effective_defect_count_max(cli_value, defect_parameter_overrides):
@@ -573,6 +676,31 @@ def _effective_defect_count_max(cli_value, defect_parameter_overrides):
 def _cooccurrence_backend_equivalence(target_profile, defect_types):
     backend_by_defect = {defect_type: _target_defect_backend_name(target_profile, defect_type) for defect_type in defect_types}
     target_id = target_profile.get("target_id")
+    defect_set = set(defect_types)
+    if target_id == "qc71336_gray" and defect_set == {"black_dot", "mixed_color_contamination"}:
+        return {
+            "cooccurrence_backend": "qc71336_gray_dedicated_cooccurrence",
+            "single_backend_by_defect": backend_by_defect,
+            "uses_shared_generic_create_defect": False,
+            "uses_same_single_defect_logic": True,
+            "non_equivalent_defects": [],
+            "notes": [
+                "QC71336 gray black_dot+mixed_color_contamination cooccurrence uses the dedicated QC71336 gray script.",
+                "The dedicated script contains both single-defect and same-scene placement logic for the supported gray defects.",
+            ],
+        }
+    if target_id == "qc7_5244_black" and defect_set.issubset({"black_dot", "foreign_material", "splay"}) and len(defect_set) in {2, 3}:
+        return {
+            "cooccurrence_backend": "qc75244_black_dedicated_cooccurrence",
+            "single_backend_by_defect": backend_by_defect,
+            "uses_shared_generic_create_defect": False,
+            "uses_same_single_defect_logic": True,
+            "non_equivalent_defects": [],
+            "notes": [
+                "QC7-5244 black cooccurrence uses the dedicated QC75244 black script.",
+                "Supported combinations include black_dot, foreign_material, and splay in two- or three-defect scenes.",
+            ],
+        }
     if target_id == "qc71336_black" and set(defect_types) == {"foreign_material", "splay"}:
         return {
             "cooccurrence_backend": "qc71336_black_reference_cooccurrence",
@@ -642,6 +770,10 @@ def _persistent_batch_backend_equivalence(target_profile, samples):
 
 def _target_defect_backend_name(target_profile, defect_type):
     target_id = target_profile["target_id"]
+    if target_id == "qc71336_gray" and defect_type == "mixed_color_contamination":
+        return "qc71336_gray_dedicated"
+    if target_id == "qc7_5244_black" and defect_type in {"black_dot", "foreign_material", "splay"}:
+        return "qc75244_black_dedicated"
     if defect_type == "black_dot" and _blackdot_backend_model(target_id) is not None:
         return "reference_blackdot"
     if target_id == "qc71336_black" and defect_type in {"foreign_material", "splay"}:
@@ -804,6 +936,12 @@ def build_parser() -> argparse.ArgumentParser:
     target_generate_parser.add_argument("--out", required=True, help="Output dataset directory.")
     target_generate_parser.add_argument("--samples", type=int, default=32, help="Cycles samples for first-pass renders.")
     target_generate_parser.add_argument("--seed", type=int, default=100, help="Base seed for generation.")
+    target_generate_parser.add_argument(
+        "--defect-count-min",
+        type=int,
+        default=1,
+        help="For supported same-type defects, minimum defect instances per image.",
+    )
     target_generate_parser.add_argument(
         "--defect-count-max",
         type=int,

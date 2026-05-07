@@ -130,6 +130,7 @@ def parse_args():
     parser.add_argument("--save_blend", action="store_true")
     parser.add_argument("--enable_mixed_color", action="store_true")
     parser.add_argument("--mixed_color_seed", type=int, default=43)
+    parser.add_argument("--defect_count_min", type=int, default=1)
     parser.add_argument("--defect_count_max", type=int, default=1)
     parser.add_argument("--anchor_sides", nargs="+", choices=["front", "back"], default=["front"])
     parser.add_argument("--debug_mixed_color_strong", action="store_true")
@@ -2066,9 +2067,14 @@ def add_same_type_mixed_color_contaminations(
     allowed_sides=None,
     debug_mixed_color_strong=False,
     debug_center_mixed_color=False,
+    min_count=1,
     max_count=1,
 ):
-    defect_count = random.randint(1, max(1, int(max_count)))
+    min_count = max(1, int(min_count))
+    max_count = max(1, int(max_count))
+    if min_count > max_count:
+        raise ValueError("min_count cannot be greater than max_count")
+    defect_count = random.randint(min_count, max_count)
     defects = []
     for instance_index in range(defect_count):
         defect = add_mixed_color_contamination(
@@ -2095,6 +2101,7 @@ def add_same_type_mixed_color_contaminations(
         "mask_mode": "directional_streak_material_drift",
         "defect_types": ["mixed_color_contamination" for _ in defects],
         "defect_count": len(defects),
+        "defect_count_min": int(min_count),
         "defect_count_max": int(max_count),
         "defects": defects,
         "anchor_side": defects[0].get("anchor_side", "front") if defects else "front",
@@ -2637,7 +2644,10 @@ def main():
             apply_validation_jitter(camera)
         if args.enable_mixed_color:
             random.seed(args.mixed_color_seed + sample_id)
+            defect_count_min = max(1, int(args.defect_count_min or 1))
             defect_count_max = max(1, int(args.defect_count_max or 1))
+            if defect_count_min > defect_count_max:
+                raise ValueError("--defect_count_min cannot be greater than --defect_count_max")
             if defect_count_max > 1:
                 defect_info = add_same_type_mixed_color_contaminations(
                     primary_obj,
@@ -2647,6 +2657,7 @@ def main():
                     allowed_sides=requested_sides,
                     debug_mixed_color_strong=args.debug_mixed_color_strong,
                     debug_center_mixed_color=args.debug_center_mixed_color,
+                    min_count=defect_count_min,
                     max_count=defect_count_max,
                 )
             else:

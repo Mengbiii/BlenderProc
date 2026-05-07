@@ -14,6 +14,12 @@ from bpy_extras.object_utils import world_to_camera_view
 
 FOREIGN_MATERIAL_VISIBLE_RADIUS_FLOOR = 0.0115
 
+SPECIALIZED_TARGET = "qc7_5244_black"
+TARGET_ALIASES = {"qc7_5244_black", "qc7-5244-black", "qc9_0852", "qc9-0852"}
+ALLOWED_SINGLE_DEFECTS = {"black_dot", "foreign_material", "splay"}
+ALLOWED_COOCCURRENCE_DEFECTS = {"black_dot", "foreign_material", "splay"}
+COOCCURRENCE_ORDER = {"splay": 0, "foreign_material": 1, "black_dot": 2}
+
 
 DEFECT_CLASS_IDS = {
     "black_dot": 0,
@@ -24,12 +30,16 @@ DEFECT_CLASS_IDS = {
 }
 
 SCRIPT_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = SCRIPT_ROOT.parent
+ASSET_MODEL_DIR = REPO_ROOT / "assets" / "models"
 DEFAULTS_PATH = SCRIPT_ROOT / "config" / "generation_defaults_registry.json"
 FORCE_GENERIC_CAMERA_KEY = "generic_force_camera"
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Generic first-pass main-plane defect renderer.")
+    parser = argparse.ArgumentParser(
+        description="Dedicated QC9-0852/QC7-5244 black main-plane defect renderer."
+    )
     parser.add_argument("--blend", default=None)
     parser.add_argument("--model_blend", default=None)
     parser.add_argument("--stl", default=None)
@@ -40,12 +50,12 @@ def parse_args():
     parser.add_argument("--height", type=int, default=1024)
     parser.add_argument("--samples", type=int, default=32)
     parser.add_argument("--seed", type=int, default=100)
-    parser.add_argument("--target", required=True)
-    parser.add_argument("--defect_type", default="black_dot", choices=sorted(DEFECT_CLASS_IDS))
+    parser.add_argument("--target", default=SPECIALIZED_TARGET)
+    parser.add_argument("--defect_type", default="black_dot", choices=sorted(ALLOWED_SINGLE_DEFECTS))
     parser.add_argument(
         "--cooccurrence_defects",
         nargs="+",
-        choices=sorted(DEFECT_CLASS_IDS),
+        choices=sorted(ALLOWED_COOCCURRENCE_DEFECTS),
         default=None,
         help="Create all listed defect types in the same scene/image.",
     )
@@ -103,7 +113,36 @@ def parse_args():
         argv = argv[argv.index("--") + 1:]
     else:
         argv = argv[1:]
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    normalize_and_validate_specialized_args(args)
+    return args
+
+
+def normalize_and_validate_specialized_args(args):
+    target = str(args.target).lower().replace("\\", "/")
+    target_key = target.rsplit("/", 1)[-1]
+    if target_key not in TARGET_ALIASES:
+        raise ValueError(
+            f"This dedicated script only supports {SPECIALIZED_TARGET} / QC9-0852; got --target {args.target!r}."
+        )
+    args.target = SPECIALIZED_TARGET
+    if args.defect_type not in ALLOWED_SINGLE_DEFECTS:
+        raise ValueError(f"Unsupported QC9-0852/QC7-5244-black defect type: {args.defect_type}")
+    if args.cooccurrence_defects:
+        if len(args.cooccurrence_defects) != len(set(args.cooccurrence_defects)):
+            raise ValueError("QC9-0852/QC7-5244-black cooccurrence defects must be unique.")
+        requested = set(args.cooccurrence_defects)
+        if not requested.issubset(ALLOWED_COOCCURRENCE_DEFECTS) or len(requested) not in {2, 3}:
+            raise ValueError(
+                "QC9-0852/QC7-5244-black cooccurrence supports 2 or 3 of: black_dot foreign_material splay."
+            )
+        args.cooccurrence_defects = sorted(requested, key=lambda item: COOCCURRENCE_ORDER[item])
+    if args.blend is None:
+        args.blend = str(ASSET_MODEL_DIR / "moxing1_test.blend")
+    if args.stl is None:
+        args.stl = str(ASSET_MODEL_DIR / "QC7-5236.stl")
+    if args.material_profile is None:
+        args.material_profile = str(SCRIPT_ROOT / "config" / "qc7_5244_black_visual_material_candidate_v3.json")
 
 
 def main():

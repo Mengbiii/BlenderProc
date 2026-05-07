@@ -14,6 +14,12 @@ from bpy_extras.object_utils import world_to_camera_view
 
 FOREIGN_MATERIAL_VISIBLE_RADIUS_FLOOR = 0.0115
 
+SPECIALIZED_TARGET = "qc71336_gray"
+TARGET_ALIASES = {"qc71336_gray", "qc7-1336-gray", "qc7-1336-grey", "qc71336_grey"}
+ALLOWED_SINGLE_DEFECTS = {"black_dot", "mixed_color_contamination"}
+ALLOWED_COOCCURRENCE_DEFECTS = {"black_dot", "mixed_color_contamination"}
+COOCCURRENCE_ORDER = {"mixed_color_contamination": 0, "black_dot": 1}
+
 
 DEFECT_CLASS_IDS = {
     "black_dot": 0,
@@ -24,12 +30,16 @@ DEFECT_CLASS_IDS = {
 }
 
 SCRIPT_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = SCRIPT_ROOT.parent
+ASSET_MODEL_DIR = REPO_ROOT / "assets" / "models"
 DEFAULTS_PATH = SCRIPT_ROOT / "config" / "generation_defaults_registry.json"
 FORCE_GENERIC_CAMERA_KEY = "generic_force_camera"
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Generic first-pass main-plane defect renderer.")
+    parser = argparse.ArgumentParser(
+        description="Dedicated QC7-1336 gray main-plane defect renderer for black-dot and mixed-color defects."
+    )
     parser.add_argument("--blend", default=None)
     parser.add_argument("--model_blend", default=None)
     parser.add_argument("--stl", default=None)
@@ -40,12 +50,12 @@ def parse_args():
     parser.add_argument("--height", type=int, default=1024)
     parser.add_argument("--samples", type=int, default=32)
     parser.add_argument("--seed", type=int, default=100)
-    parser.add_argument("--target", required=True)
-    parser.add_argument("--defect_type", default="black_dot", choices=sorted(DEFECT_CLASS_IDS))
+    parser.add_argument("--target", default=SPECIALIZED_TARGET)
+    parser.add_argument("--defect_type", default="black_dot", choices=sorted(ALLOWED_SINGLE_DEFECTS))
     parser.add_argument(
         "--cooccurrence_defects",
         nargs="+",
-        choices=sorted(DEFECT_CLASS_IDS),
+        choices=sorted(ALLOWED_SINGLE_DEFECTS),
         default=None,
         help="Create all listed defect types in the same scene/image.",
     )
@@ -55,7 +65,7 @@ def parse_args():
     parser.add_argument("--defect_count_min", type=int, default=1)
     parser.add_argument("--defect_count_max", type=int, default=1)
     parser.add_argument("--normal_mode", action="store_true", help="Render normal/no-defect samples with empty masks and labels.")
-    parser.add_argument("--anchor_sides", nargs="+", choices=["front", "back", "side"], default=["front", "back"])
+    parser.add_argument("--anchor_sides", nargs="+", choices=["front", "back"], default=["front", "back"])
     parser.add_argument("--force_generic_camera", action="store_true")
     parser.add_argument("--force_generic_lighting", action="store_true")
     parser.add_argument("--preserve_materials", action="store_true")
@@ -103,7 +113,34 @@ def parse_args():
         argv = argv[argv.index("--") + 1:]
     else:
         argv = argv[1:]
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    normalize_and_validate_specialized_args(args)
+    return args
+
+
+def normalize_and_validate_specialized_args(args):
+    target = str(args.target).lower().replace("\\", "/")
+    target_key = target.rsplit("/", 1)[-1]
+    if target_key not in TARGET_ALIASES:
+        raise ValueError(
+            f"This dedicated script only supports {SPECIALIZED_TARGET}; got --target {args.target!r}."
+        )
+    args.target = SPECIALIZED_TARGET
+    if args.defect_type not in ALLOWED_SINGLE_DEFECTS:
+        raise ValueError(f"Unsupported QC7-1336 gray defect type: {args.defect_type}")
+    if args.cooccurrence_defects:
+        requested = set(args.cooccurrence_defects)
+        if requested != ALLOWED_COOCCURRENCE_DEFECTS or len(args.cooccurrence_defects) != 2:
+            raise ValueError(
+                "QC7-1336 gray cooccurrence supports exactly: black_dot mixed_color_contamination."
+            )
+        args.cooccurrence_defects = sorted(requested, key=lambda item: COOCCURRENCE_ORDER[item])
+    if args.blend is None:
+        args.blend = str(ASSET_MODEL_DIR / "moxing2.blend")
+    if args.model_blend is None:
+        args.model_blend = str(ASSET_MODEL_DIR / "QC7-1336-white.blend")
+    if args.stl is None:
+        args.stl = str(ASSET_MODEL_DIR / "QC7-1336.stl")
 
 
 def main():
@@ -153,6 +190,7 @@ def main():
             position_camera_for_side(camera, product, camera_side, args.target)
             if not view_transform["enabled"]:
                 apply_camera_domain_randomization(camera, product, camera_side, args.target, rng)
+        configure_qc71336_gray_reference_support(product, camera_side)
         ensure_camera_backdrop(product, camera, args.target)
         setup_lighting(product, camera, args.target, force_generic_lighting=args.force_generic_lighting)
         if view_transform["enabled"]:
@@ -349,6 +387,7 @@ def run_cooccurrence_generation(args, defaults, output_dir, product, camera, sce
             position_camera_for_side(camera, product, camera_side, args.target)
             if args.object_transform_mode == "none":
                 apply_camera_domain_randomization(camera, product, camera_side, args.target, rng)
+        configure_qc71336_gray_reference_support(product, camera_side)
         ensure_camera_backdrop(product, camera, args.target)
         setup_lighting(product, camera, args.target, rng=rng, force_generic_lighting=args.force_generic_lighting)
 
@@ -467,6 +506,7 @@ def run_same_type_multi_generation(args, defaults, output_dir, product, camera, 
             position_camera_for_side(camera, product, camera_side, args.target)
             if args.object_transform_mode == "none":
                 apply_camera_domain_randomization(camera, product, camera_side, args.target, rng)
+        configure_qc71336_gray_reference_support(product, camera_side)
         ensure_camera_backdrop(product, camera, args.target)
         setup_lighting(product, camera, args.target, rng=rng, force_generic_lighting=args.force_generic_lighting)
 
@@ -699,7 +739,7 @@ def apply_object_view_transform_to_defects(product, defects, transform):
     matrix = Matrix.Translation(pivot + translation) @ rotation @ Matrix.Translation(-pivot)
     objects = [product]
     for defect in defects:
-        for obj in defect_mesh_objects(defect):
+        for obj in defect_mesh_objects(defect, include_support=True):
             if obj not in objects:
                 objects.append(obj)
     for obj in objects:
@@ -1006,6 +1046,8 @@ def ensure_background_support(base_color=(0.82, 0.825, 0.83, 1.0), roughness=0.8
 
 
 def ensure_camera_backdrop(product, camera, target, normal_mode=False):
+    if is_qc71336_gray_target(target) and not normal_mode:
+        return
     if not normal_mode and not (is_qc7_5244_target(target) or is_ql3_target(target) or is_qc71336_gray_target(target)):
         return
     for obj in list(bpy.data.objects):
@@ -1068,6 +1110,26 @@ def ensure_camera_backdrop(product, camera, target, normal_mode=False):
     bpy.context.view_layer.update()
 
 
+def configure_qc71336_gray_reference_support(product, side):
+    if not is_qc71336_gray_target(product.get("target_id", "qc71336_gray")) and not product.name.startswith("GENERIC_TARGET_qc71336_gray"):
+        return
+    min_v, max_v = world_bbox(product)
+    span = max_v - min_v
+    max_dim = max(float(abs(span.x)), float(abs(span.y)), float(abs(span.z)), 1e-6)
+    support_z = max_v.z + 0.05 * max_dim if side == "back" else min_v.z - 0.05 * max_dim
+    plane = bpy.data.objects.get("GENERIC_REFERENCE_BACKDROP")
+    if plane is None:
+        ensure_background_support()
+        plane = bpy.data.objects.get("GENERIC_REFERENCE_BACKDROP")
+    if plane is None:
+        return
+    plane.location.z = support_z
+    plane.rotation_euler = (0.0, 0.0, 0.0)
+    plane.hide_render = False
+    plane.hide_viewport = False
+    bpy.context.view_layer.update()
+
+
 def find_principled(mat):
     if mat is None or not mat.use_nodes or mat.node_tree is None:
         return None
@@ -1095,6 +1157,11 @@ def make_basic_principled_material(name, base_color, roughness, specular, alpha=
     set_principled_input(bsdf, "Roughness", roughness)
     set_principled_input(bsdf, ("Specular IOR Level", "Specular"), specular)
     set_principled_input(bsdf, "Alpha", alpha)
+    if alpha < 1.0:
+        mat.blend_method = "BLEND"
+        mat.shadow_method = "HASHED"
+        if hasattr(mat, "surface_render_method"):
+            mat.surface_render_method = "BLENDED"
     return mat
 
 
@@ -1896,6 +1963,28 @@ def create_defect(product, target, defect_type, rng, sides, defaults, allow_targ
     dims = max_v - min_v
     max_dim = max(float(dims.x), float(dims.y), float(dims.z), 1.0)
     side = rng.choice(sides or ["front"])
+    if is_qc71336_gray_target(target) and defect_type == "black_dot":
+        radius = max_dim * rng.uniform(0.0018, 0.0032)
+        depth = max_dim * rng.uniform(0.00078, 0.00135)
+        anchor = sample_qc71336_gray_reference_anchor(product, rng, sides or [side])
+        obj = add_qc71336_gray_reference_black_dot("GENERIC_DEFECT_BLACK_DOT", radius, depth, rng)
+        obj.location = anchor["world_point"]
+        obj.rotation_euler = anchor["world_normal"].to_track_quat("Z", "Y").to_euler()
+        obj.rotation_euler.rotate_axis("Z", rng.uniform(0.0, math.tau))
+        obj["anchor_side"] = anchor["side"]
+        obj["main_plane_axis"] = "z"
+        obj["placement_policy"] = placement_policy_for_target(target)
+        obj["defect_type"] = defect_type
+        obj["defect_family"] = "embedded_internal"
+        obj["support_artifacts"] = ["black_dot_coupling_patch"]
+        obj["anchor_polygon_index"] = int(anchor["polygon_index"])
+        obj["anchor_score"] = float(anchor["score"])
+        obj["anchor_view_alignment"] = float(anchor["view_alignment"])
+        obj["anchor_local_xyz"] = anchor["local_xyz"]
+        obj["world_point"] = [float(v) for v in anchor["world_point"]]
+        obj["world_normal"] = [float(v) for v in anchor["world_normal"]]
+        bpy.context.view_layer.update()
+        return obj
     frame = placement_frame_for_target(min_v, max_v, target, side)
     if is_ql3_target(target) and defect_type == "splay":
         frame["normalized_ranges"] = {
@@ -1929,8 +2018,7 @@ def create_defect(product, target, defect_type, rng, sides, defaults, allow_targ
     size_range = defect_defaults.get("size_factor_range", [0.012, 0.035])
     radius = max_dim * rng.uniform(float(size_range[0]), float(size_range[1]))
     size_scale = float(defect_defaults.get("size_scale", 1.0))
-    if is_qc71336_gray_target(target) and defect_type == "black_dot":
-        radius = max_dim * rng.uniform(0.0020, 0.0038)
+    qc71336_gray_black_dot_depth = None
     if is_qc7_5244_black_target(target):
         if defect_type == "black_dot":
             radius = max_dim * rng.uniform(0.0022, 0.0039)
@@ -1988,7 +2076,14 @@ def create_defect(product, target, defect_type, rng, sides, defaults, allow_targ
             radius * float(defect_defaults.get("height_multiplier", 1.5)),
         )
     else:
-        if is_qc7_5244_black_target(target):
+        if is_qc71336_gray_target(target):
+            obj = add_qc71336_gray_reference_black_dot(
+                "GENERIC_DEFECT_BLACK_DOT",
+                radius,
+                qc71336_gray_black_dot_depth or max_dim * 0.0016,
+                rng,
+            )
+        elif is_qc7_5244_black_target(target):
             obj = add_qc7_black_dot_smudge("GENERIC_DEFECT_BLACK_DOT", radius, rng)
         else:
             obj = add_disk_defect("GENERIC_DEFECT_BLACK_DOT", radius)
@@ -2002,6 +2097,10 @@ def create_defect(product, target, defect_type, rng, sides, defaults, allow_targ
     obj["main_plane_axis"] = ["x", "y", "z"][normal_axis]
     obj["placement_policy"] = frame["placement_policy"]
     obj["defect_type"] = defect_type
+    if is_qc71336_gray_target(target) and defect_type == "black_dot":
+        obj["defect_family"] = "embedded_internal"
+        obj["support_artifacts"] = ["black_dot_coupling_patch"]
+        return obj
     if is_qc7_5244_black_target(target) and defect_type == "black_dot":
         halo_material = make_qc7_black_dot_material("GENERIC_BLACK_DOT_HALO_MAT", (0.092, 0.088, 0.078, 1.0), 0.88)
         core_material = make_qc7_black_dot_material("GENERIC_BLACK_DOT_CORE_MAT", (0.045, 0.040, 0.034, 1.0), 0.86)
@@ -2026,6 +2125,81 @@ def create_defect(product, target, defect_type, rng, sides, defaults, allow_targ
         for mesh_obj in defect_mesh_objects(obj):
             mesh_obj.data.materials.append(defect_material)
     return obj
+
+
+def sample_qc71336_gray_reference_anchor(product, rng, allowed_sides):
+    allowed_sides = set(allowed_sides or ["front"])
+    min_v, max_v = world_bbox(product)
+    center = (min_v + max_v) * 0.5
+    dims = max_v - min_v
+    half_x = max(abs(float(dims.x)) * 0.5, 1e-6)
+    half_y = max(abs(float(dims.y)) * 0.5, 1e-6)
+    half_z = max(abs(float(dims.z)) * 0.5, 1e-6)
+    camera_presets = build_qc71336_gray_reference_camera_presets(product)
+    areas = sorted(max(float(poly.area), 1e-10) for poly in product.data.polygons)
+    area_floor = max(areas[min(len(areas) - 1, max(0, int(len(areas) * 0.22)))] * 0.55, areas[-1] * 0.00005)
+    normal_matrix = product.matrix_world.to_3x3()
+    candidates = []
+    for poly in product.data.polygons:
+        world_center = product.matrix_world @ poly.center
+        normal = (normal_matrix @ poly.normal).normalized()
+        side = "front" if normal.z >= 0.62 else ("back" if normal.z <= -0.62 else None)
+        if side not in allowed_sides:
+            continue
+        local_x = float(world_center.x - center.x) / half_x
+        local_y = float(world_center.y - center.y) / half_y
+        local_z = float(world_center.z - center.z) / half_z
+        if abs(local_x) > 0.90 or abs(local_y) > 0.92:
+            continue
+        if max(float(poly.area), 1e-10) < area_floor:
+            continue
+        camera_location = camera_presets[side]["location"]
+        view_alignment = float(normal.dot((camera_location - world_center).normalized()))
+        if view_alignment < 0.20:
+            continue
+        center_score = max(0.0, 1.0 - (abs(local_x) * 0.58 + abs(local_y) * 0.40))
+        z_score = min(1.0, abs(local_z))
+        score = center_score * 1.35 + z_score * 0.42 + min(float(poly.area) / area_floor, 3.0) * 0.10 + rng.random() * 0.25
+        candidates.append(
+            {
+                "polygon_index": poly.index,
+                "world_point": world_center,
+                "world_normal": normal,
+                "side": side,
+                "score": score,
+                "local_xyz": [float(local_x), float(local_y), float(local_z)],
+                "view_alignment": view_alignment,
+            }
+        )
+    if not candidates:
+        raise RuntimeError(f"No stable QC71336 gray reference anchor found for sides={sorted(allowed_sides)}.")
+    candidates.sort(key=lambda item: item["score"], reverse=True)
+    shortlist = candidates[: min(48, len(candidates))]
+    floor = shortlist[-1]["score"]
+    weights = [max(item["score"] - floor + 0.02, 0.002) for item in shortlist]
+    return rng.choices(shortlist, weights=weights, k=1)[0]
+
+
+def build_qc71336_gray_reference_camera_presets(product):
+    min_v, max_v = world_bbox(product)
+    center = (min_v + max_v) * 0.5
+    span = max_v - min_v
+    max_dim = max(float(abs(span.x)), float(abs(span.y)), float(abs(span.z)), 1e-6)
+    focus_target = center + Vector((0.0, 0.015 * max_dim, 0.0))
+    presets = {}
+    for side, offset, shift_y in (
+        ("front", Vector((-0.08, -0.42, 2.58)), -0.02),
+        ("back", Vector((0.08, -0.42, -2.58)), 0.009),
+    ):
+        location = center + offset * max_dim
+        presets[side] = {
+            "location": location,
+            "rotation": (focus_target - location).to_track_quat("-Z", "Y").to_euler(),
+            "lens": 66.0,
+            "shift_x": 0.0,
+            "shift_y": shift_y,
+        }
+    return presets
 
 
 def ensure_surface_proxy(product, target, defaults, side):
@@ -2083,6 +2257,150 @@ def add_disk_defect(name, radius, vertices=32):
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
     return obj
+
+
+def add_qc71336_gray_reference_black_dot(name, radius, depth, rng):
+    parent = bpy.data.objects.new(name, None)
+    bpy.context.collection.objects.link(parent)
+    parent["defect_group"] = True
+    parent["reference_style"] = "reference_blend_blackdot_multi_model_qc71336_gray"
+
+    center_mat, edge_mat, patch_mat = build_qc71336_gray_reference_black_dot_materials(rng)
+    patch_radius = radius * rng.uniform(1.12, 1.85)
+    patch = create_qc71336_gray_black_dot_local_patch(name + "_LOCAL", patch_radius, patch_mat, rng)
+    dot_mesh = create_qc71336_gray_black_dot_mesh(radius, depth, rng)
+    dot = bpy.data.objects.new(name + "_CORE", dot_mesh)
+    bpy.context.collection.objects.link(dot)
+    dot.data.materials.append(center_mat)
+    dot.data.materials.append(edge_mat)
+    dot["category_id"] = DEFECT_CLASS_IDS["black_dot"]
+    dot["class_name"] = "black_dot"
+    dot["defect_type"] = "black_dot"
+    dot["defect_type_canonical"] = "black_dot"
+
+    embed_offset = max(depth * 0.11, radius * 0.010)
+    dot.location = (0.0, 0.0, -embed_offset)
+    dot.pass_index = 1
+    patch.pass_index = 0
+    patch.parent = parent
+    dot.parent = parent
+    parent.rotation_euler.rotate_axis("Z", rng.uniform(0.0, math.tau))
+    parent["dot_object"] = dot.name
+    parent["patch_object"] = patch.name
+    parent["radius"] = float(radius)
+    parent["depth"] = float(depth)
+    return parent
+
+
+def build_qc71336_gray_reference_black_dot_materials(rng):
+    center = make_basic_principled_material(
+        "GENERIC_QC71336_GRAY_BLACK_DOT_CENTER",
+        (0.022, 0.020, 0.019, 1.0),
+        0.82,
+        0.018,
+    )
+    edge = make_basic_principled_material(
+        "GENERIC_QC71336_GRAY_BLACK_DOT_EDGE",
+        (0.060, 0.056, 0.052, 1.0),
+        0.86,
+        0.012,
+    )
+    patch = make_basic_principled_material(
+        "GENERIC_QC71336_GRAY_BLACK_DOT_LOCAL_PATCH",
+        (0.24, 0.235, 0.23, 1.0),
+        0.96,
+        0.0,
+        alpha=0.030,
+    )
+    add_noise_bump(center, scale=980.0, strength=0.0008, distance=0.0005)
+    add_noise_bump(edge, scale=920.0, strength=0.00055, distance=0.00045)
+    add_noise_bump(patch, scale=760.0, strength=0.00035, distance=0.00035)
+    return center, edge, patch
+
+
+def create_qc71336_gray_black_dot_local_patch(name, radius, mat, rng):
+    vertex_count = rng.randint(18, 26)
+    squash_x = rng.uniform(0.84, 1.14)
+    squash_y = rng.uniform(0.84, 1.14)
+    verts = [(0.0, 0.0, 0.0)]
+    inner_ring = []
+    outer_ring = []
+    wave_freq = rng.uniform(2.0, 4.0)
+    wave_phase = rng.uniform(0.0, math.tau)
+    for idx in range(vertex_count):
+        angle = math.tau * idx / vertex_count
+        wave = 1.0 + 0.10 * math.sin(angle * wave_freq + wave_phase)
+        inner_radius = radius * rng.uniform(0.42, 0.62) * wave
+        outer_radius = radius * rng.uniform(0.86, 1.30) * wave
+        inner_ring.append(len(verts))
+        verts.append((math.cos(angle) * inner_radius * squash_x, math.sin(angle) * inner_radius * squash_y, 0.0))
+        outer_ring.append(len(verts))
+        verts.append((math.cos(angle) * outer_radius * squash_x, math.sin(angle) * outer_radius * squash_y, 0.0))
+    faces = []
+    for idx in range(vertex_count):
+        nxt = (idx + 1) % vertex_count
+        faces.append((0, inner_ring[idx], inner_ring[nxt]))
+        faces.append((inner_ring[idx], outer_ring[idx], outer_ring[nxt], inner_ring[nxt]))
+    mesh = bpy.data.meshes.new(name + "_MESH")
+    mesh.from_pydata(verts, [], faces)
+    mesh.update()
+    patch = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(patch)
+    patch.location = (0.0, 0.0, max(radius * 0.010, 1e-5))
+    patch.rotation_euler.rotate_axis("Z", rng.uniform(0.0, math.tau))
+    patch.data.materials.append(mat)
+    patch["category_id"] = 1
+    patch["class_name"] = "local_contamination"
+    patch["support_artifact_role"] = "black_dot_coupling_patch"
+    return patch
+
+
+def create_qc71336_gray_black_dot_mesh(radius, depth, rng):
+    vertex_count = rng.randint(11, 17)
+    squash_x = rng.uniform(0.68, 1.26)
+    squash_y = rng.uniform(0.70, 1.22)
+    top_z = depth * rng.uniform(0.16, 0.28)
+    bottom_z = -depth * rng.uniform(0.42, 0.62)
+    wave_freq = rng.uniform(2.0, 5.2)
+    wave_phase = rng.uniform(0.0, math.tau)
+    verts = [(0.0, 0.0, top_z), (0.0, 0.0, bottom_z)]
+    inner_ring = []
+    top_ring = []
+    bottom_ring = []
+    for idx in range(vertex_count):
+        angle = math.tau * idx / vertex_count
+        wave = 1.0 + 0.12 * math.sin(angle * wave_freq + wave_phase)
+        local_radius = radius * rng.uniform(0.62, 1.28) * wave
+        x = math.cos(angle) * local_radius * squash_x
+        y = math.sin(angle) * local_radius * squash_y
+        inner_radius = local_radius * rng.uniform(0.30, 0.50)
+        inner_ring.append(len(verts))
+        inner_top_scale = rng.uniform(0.84, 1.08)
+        verts.append((math.cos(angle) * inner_radius * squash_x, math.sin(angle) * inner_radius * squash_y, top_z * inner_top_scale))
+        top_ring.append(len(verts))
+        top_outer_scale = rng.uniform(0.48, 0.88)
+        verts.append((x, y, top_z * top_outer_scale))
+        bottom_ring.append(len(verts))
+        bottom_xy_scale = rng.uniform(0.76, 1.06)
+        verts.append((x * bottom_xy_scale, y * bottom_xy_scale, bottom_z))
+    faces = []
+    material_indices = []
+    for idx in range(vertex_count):
+        nxt = (idx + 1) % vertex_count
+        faces.append((0, inner_ring[idx], inner_ring[nxt]))
+        material_indices.append(0)
+        faces.append((inner_ring[idx], top_ring[idx], top_ring[nxt], inner_ring[nxt]))
+        material_indices.append(1)
+        faces.append((1, bottom_ring[nxt], bottom_ring[idx]))
+        material_indices.append(1)
+        faces.append((top_ring[idx], bottom_ring[idx], bottom_ring[nxt], top_ring[nxt]))
+        material_indices.append(1)
+    mesh = bpy.data.meshes.new("GENERIC_QC71336_GRAY_BLACK_DOT_MESH")
+    mesh.from_pydata(verts, [], faces)
+    mesh.update()
+    for poly, material_index in zip(mesh.polygons, material_indices):
+        poly.material_index = material_index
+    return mesh
 
 
 def add_plane_defect(name, width, height):
@@ -2813,10 +3131,18 @@ def cleanup_defects():
             bpy.data.objects.remove(obj, do_unlink=True)
 
 
-def defect_mesh_objects(defect):
+def defect_mesh_objects(defect, include_support=False):
     if defect.type == "MESH":
+        if not include_support and defect.get("support_artifact_role"):
+            return []
         return [defect]
-    return [obj for obj in bpy.data.objects if obj.type == "MESH" and obj.parent == defect]
+    return [
+        obj
+        for obj in bpy.data.objects
+        if obj.type == "MESH"
+        and obj.parent == defect
+        and (include_support or not obj.get("support_artifact_role"))
+    ]
 
 
 def scale_defect_object(defect, scale_factor):
