@@ -23,6 +23,21 @@ FOREIGN_MATERIAL_VISIBLE_RADIUS_CEILING = 0.0088
 GRAY_BASE_RGBA = (0.445, 0.438, 0.432, 1.0)
 GRAY_SUBSURFACE_RGBA = (0.382, 0.376, 0.372, 1.0)
 WHITE_REAL_DOMAIN_COLOR_SCALE = (0.95, 0.94, 0.93)
+WHITE_TEXTURED_PROFILE = {
+    "fine_noise_scale": 300.0,
+    "fine_noise_detail": 14.0,
+    "fine_noise_roughness": 0.66,
+    "bump_strength": 0.0120,
+    "bump_distance": 0.0040,
+    "roughness_low": 0.68,
+    "roughness_high": 0.98,
+    "base_low": (0.500, 0.510, 0.495, 1.0),
+    "base_high": (0.705, 0.715, 0.695, 1.0),
+    "broad_noise_scale": 28.0,
+    "broad_noise_detail": 8.0,
+    "broad_bump_strength": 0.0020,
+    "broad_bump_distance": 0.0080,
+}
 
 
 def parse_args():
@@ -39,6 +54,11 @@ def parse_args():
     parser.add_argument("--samples", type=int, default=256)
     parser.add_argument("--save_blend", action="store_true")
     parser.add_argument("--use_gray_override", action="store_true")
+    parser.add_argument(
+        "--disable_white_texture_enhancement",
+        action="store_true",
+        help="Keep the previous white prebuilt material tuning without adding texture-driven roughness/bump nodes.",
+    )
     parser.add_argument("--enable_black_dot", action="store_true")
     parser.add_argument("--black_dot_seed", type=int, default=23)
     parser.add_argument("--black_dot_radius_scale", type=float, default=0.00190)
@@ -381,6 +401,137 @@ def tune_prebuilt_white_materials_for_real_domain(imported_objects):
             }
     bpy.context.view_layer.update()
     return tuned
+
+
+def clear_socket_links(tree, socket):
+    for link in list(socket.links):
+        tree.links.remove(link)
+
+
+def enhance_prebuilt_white_materials_with_texture(imported_objects):
+    enhanced = {}
+    profile = WHITE_TEXTURED_PROFILE
+    for obj in imported_objects:
+        if obj.type != "MESH":
+            continue
+        for mat in obj.data.materials:
+            if mat is None or mat.name in enhanced:
+                continue
+            if not mat.use_nodes or mat.node_tree is None:
+                continue
+            bsdf = find_principled(mat)
+            if bsdf is None:
+                continue
+
+            tree = mat.node_tree
+            nodes = tree.nodes
+            links = tree.links
+
+            base_input = bsdf.inputs.get("Base Color")
+            roughness_input = bsdf.inputs.get("Roughness")
+            normal_input = bsdf.inputs.get("Normal")
+            if base_input is None or roughness_input is None or normal_input is None:
+                continue
+
+            spec_name = "Specular IOR Level" if "Specular IOR Level" in bsdf.inputs else "Specular"
+            spec_input = bsdf.inputs.get(spec_name)
+            if spec_input is not None:
+                spec_input.default_value = min(float(spec_input.default_value), 0.18)
+
+            clear_socket_links(tree, base_input)
+            clear_socket_links(tree, roughness_input)
+            clear_socket_links(tree, normal_input)
+
+            texcoord = nodes.new("ShaderNodeTexCoord")
+            texcoord.label = "WHITE_TEXTURE_OBJECT_COORDS"
+            fine_mapping = nodes.new("ShaderNodeMapping")
+            fine_mapping.label = "WHITE_TEXTURE_FINE_MAPPING"
+            fine_noise = nodes.new("ShaderNodeTexNoise")
+            fine_noise.label = "WHITE_TEXTURE_FINE_GRAIN_NOISE"
+            rough_ramp = nodes.new("ShaderNodeValToRGB")
+            rough_ramp.label = "WHITE_TEXTURE_ROUGHNESS_VARIATION"
+            base_ramp = nodes.new("ShaderNodeValToRGB")
+            base_ramp.label = "WHITE_TEXTURE_SUBTLE_COLOR_VARIATION"
+            fine_bump = nodes.new("ShaderNodeBump")
+            fine_bump.label = "WHITE_TEXTURE_FINE_GRAIN_BUMP"
+
+            broad_mapping = nodes.new("ShaderNodeMapping")
+            broad_mapping.label = "WHITE_TEXTURE_BROAD_MAPPING"
+            broad_noise = nodes.new("ShaderNodeTexNoise")
+            broad_noise.label = "WHITE_TEXTURE_BROAD_MOLD_FLOW_NOISE"
+            broad_bump = nodes.new("ShaderNodeBump")
+            broad_bump.label = "WHITE_TEXTURE_BROAD_MOLD_FLOW_BUMP"
+
+            fine_mapping.inputs["Scale"].default_value = (
+                profile["fine_noise_scale"],
+                profile["fine_noise_scale"],
+                profile["fine_noise_scale"],
+            )
+            fine_noise.inputs["Scale"].default_value = 1.0
+            fine_noise.inputs["Detail"].default_value = profile["fine_noise_detail"]
+            fine_noise.inputs["Roughness"].default_value = profile["fine_noise_roughness"]
+
+            rough_ramp.color_ramp.elements[0].position = 0.24
+            rough_ramp.color_ramp.elements[0].color = (
+                profile["roughness_low"],
+                profile["roughness_low"],
+                profile["roughness_low"],
+                1.0,
+            )
+            rough_ramp.color_ramp.elements[1].position = 0.82
+            rough_ramp.color_ramp.elements[1].color = (
+                profile["roughness_high"],
+                profile["roughness_high"],
+                profile["roughness_high"],
+                1.0,
+            )
+
+            base_ramp.color_ramp.elements[0].position = 0.18
+            base_ramp.color_ramp.elements[0].color = profile["base_low"]
+            base_ramp.color_ramp.elements[1].position = 0.86
+            base_ramp.color_ramp.elements[1].color = profile["base_high"]
+
+            fine_bump.inputs["Strength"].default_value = profile["bump_strength"]
+            fine_bump.inputs["Distance"].default_value = profile["bump_distance"]
+
+            broad_mapping.inputs["Scale"].default_value = (
+                profile["broad_noise_scale"],
+                profile["broad_noise_scale"],
+                profile["broad_noise_scale"],
+            )
+            broad_noise.inputs["Scale"].default_value = 1.0
+            broad_noise.inputs["Detail"].default_value = profile["broad_noise_detail"]
+            broad_noise.inputs["Roughness"].default_value = 0.55
+            broad_bump.inputs["Strength"].default_value = profile["broad_bump_strength"]
+            broad_bump.inputs["Distance"].default_value = profile["broad_bump_distance"]
+
+            links.new(texcoord.outputs["Object"], fine_mapping.inputs["Vector"])
+            links.new(fine_mapping.outputs["Vector"], fine_noise.inputs["Vector"])
+            links.new(fine_noise.outputs["Fac"], rough_ramp.inputs["Fac"])
+            links.new(fine_noise.outputs["Fac"], base_ramp.inputs["Fac"])
+            links.new(rough_ramp.outputs["Color"], roughness_input)
+            links.new(base_ramp.outputs["Color"], base_input)
+
+            links.new(texcoord.outputs["Object"], broad_mapping.inputs["Vector"])
+            links.new(broad_mapping.outputs["Vector"], broad_noise.inputs["Vector"])
+            links.new(broad_noise.outputs["Fac"], broad_bump.inputs["Height"])
+            links.new(broad_bump.outputs["Normal"], fine_bump.inputs["Normal"])
+            links.new(fine_noise.outputs["Fac"], fine_bump.inputs["Height"])
+            links.new(fine_bump.outputs["Normal"], normal_input)
+
+            mat["qc71336_white_texture_profile"] = json.dumps(profile, ensure_ascii=False)
+            enhanced[mat.name] = {
+                "base_color_range": [list(profile["base_low"]), list(profile["base_high"])],
+                "roughness_range": [profile["roughness_low"], profile["roughness_high"]],
+                "fine_noise_scale": profile["fine_noise_scale"],
+                "bump_strength": profile["bump_strength"],
+                "bump_distance": profile["bump_distance"],
+                "broad_noise_scale": profile["broad_noise_scale"],
+                "broad_bump_strength": profile["broad_bump_strength"],
+                "specular": float(spec_input.default_value) if spec_input is not None else None,
+            }
+    bpy.context.view_layer.update()
+    return enhanced
 
 
 def build_qc71336_gray_override_material():
@@ -2123,12 +2274,15 @@ def main():
     fit_objects_to_reference(imported, primary_objects)
     original_materials = summarize_existing_materials(imported)
     white_real_domain_material_tuning = None
+    white_texture_material_enhancement = None
     gray_override_material = None
     if args.use_gray_override:
         gray_override_material = apply_gray_override_material(imported)
         tune_reference_lighting_for_gray_override()
     else:
         white_real_domain_material_tuning = tune_prebuilt_white_materials_for_real_domain(imported)
+        if not args.disable_white_texture_enhancement:
+            white_texture_material_enhancement = enhance_prebuilt_white_materials_with_texture(imported)
     assigned_materials = summarize_existing_materials(imported)
     camera = ensure_camera_for_objects(imported, args.width, args.height)
     camera_presets = build_two_sided_camera_presets(imported)
@@ -2300,8 +2454,20 @@ def main():
                 "task_type": f"reference_scene_{defect_type}_validation" if defect_info is not None else "reference_scene_normal_part_validation",
                 "model_name": "QC7-1336",
                 "geometry_profile": "qc7_1336_geometry",
-                "appearance_profile": "qc71336_gray_override_profile" if args.use_gray_override else "qc71336_white_prebuilt_profile",
-                "material_family": "qc71336_gray_override_plastic" if args.use_gray_override else "prebuilt_authored_white_plastic",
+                "appearance_profile": (
+                    "qc71336_gray_override_profile"
+                    if args.use_gray_override
+                    else "qc71336_white_textured_prebuilt_profile"
+                    if not args.disable_white_texture_enhancement
+                    else "qc71336_white_prebuilt_profile"
+                ),
+                "material_family": (
+                    "qc71336_gray_override_plastic"
+                    if args.use_gray_override
+                    else "prebuilt_authored_white_plastic_textured"
+                    if not args.disable_white_texture_enhancement
+                    else "prebuilt_authored_white_plastic"
+                ),
                 "defect_type": defect_type,
                 "defect_type_internal": defect_type if defect_info is not None else None,
                 "defect_type_canonical": defect_type if defect_info is not None else None,
@@ -2320,6 +2486,7 @@ def main():
                 "gray_override_enabled": bool(args.use_gray_override),
                 "gray_override_material": gray_override_material,
                 "white_real_domain_material_tuning": white_real_domain_material_tuning,
+                "white_texture_material_enhancement": white_texture_material_enhancement,
                 "black_dot_version": BLACK_DOT_VERSION if args.enable_black_dot else None,
                 "foreign_material_version": FOREIGN_MATERIAL_VERSION if args.enable_foreign_material else None,
                 "black_dot": defect_info if args.enable_black_dot else None,
@@ -2345,8 +2512,20 @@ def main():
         "model_blend": str(Path(args.model_blend).resolve()),
         "model_name": "QC7-1336",
         "geometry_profile": "qc7_1336_geometry",
-        "appearance_profile": "qc71336_gray_override_profile" if args.use_gray_override else "qc71336_white_prebuilt_profile",
-        "material_family": "qc71336_gray_override_plastic" if args.use_gray_override else "prebuilt_authored_white_plastic",
+        "appearance_profile": (
+            "qc71336_gray_override_profile"
+            if args.use_gray_override
+            else "qc71336_white_textured_prebuilt_profile"
+            if not args.disable_white_texture_enhancement
+            else "qc71336_white_prebuilt_profile"
+        ),
+        "material_family": (
+            "qc71336_gray_override_plastic"
+            if args.use_gray_override
+            else "prebuilt_authored_white_plastic_textured"
+            if not args.disable_white_texture_enhancement
+            else "prebuilt_authored_white_plastic"
+        ),
         "defect_type": "foreign_material" if args.enable_foreign_material else "black_dot" if args.enable_black_dot else "none",
         "defect_type_internal": "foreign_material" if args.enable_foreign_material else "black_dot" if args.enable_black_dot else None,
         "defect_type_canonical": "foreign_material" if args.enable_foreign_material else "black_dot" if args.enable_black_dot else None,
@@ -2362,16 +2541,19 @@ def main():
         "gpu_info": gpu_info,
         "lighting": capture_light_summary(),
         "white_real_domain_material_tuning": white_real_domain_material_tuning,
+        "white_texture_material_enhancement": white_texture_material_enhancement,
+        "white_texture_enhancement_enabled": bool(not args.disable_white_texture_enhancement and not args.use_gray_override),
         "gray_real_domain_tuning": bool(args.use_gray_override),
         "pack_error": pack_error,
         "samples": samples,
         "notes": [
             f"Baseline locked as {BASELINE_VERSION}.",
             BASELINE_SUMMARY,
-            "Uses the manually authored materials embedded in QC7-1336-white.blend and intentionally skips script-side material reassignment unless --use_gray_override is enabled.",
+            "Uses the manually authored materials embedded in QC7-1336-white.blend, then adds a procedural white texture enhancement layer unless disabled.",
             "Only objects whose names contain QC8-8511-000N301002ST0101 are kept for rendering from the appended model blend.",
             "Camera was pulled back slightly to preserve more of the part silhouette in-frame.",
             "White prebuilt mode applies a real-domain material and lighting correction to reduce the previous over-bright studio-render look.",
+            "White textured mode adds procedural roughness, fine bump, and mild grey-white color variation to improve molded-plastic roughness readability.",
             "Gray override now targets the darker, slightly warm-gray appearance seen in the QC7-1336 real reference photos.",
             "When enabled, black-dot mode adds one main embedded dot plus a subtle local contamination patch; RGB keeps both while mask/bbox/YOLO target the main dot only.",
         ],

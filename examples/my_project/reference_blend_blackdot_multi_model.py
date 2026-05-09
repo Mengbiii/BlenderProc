@@ -16,6 +16,22 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
 ASSET_MODEL_DIR = REPO_ROOT / "assets" / "models"
 EXTERNAL_PLACEMENT_CONTROL = None
+QC71336_GRAY_TEXTURED_PROFILE = {
+    "fine_noise_scale": 300.0,
+    "fine_noise_detail": 14.0,
+    "fine_noise_roughness": 0.66,
+    "bump_strength": 0.0120,
+    "bump_distance": 0.0040,
+    "roughness_low": 0.68,
+    "roughness_high": 0.98,
+    "base_low": (0.500, 0.510, 0.495, 1.0),
+    "base_high": (0.705, 0.715, 0.695, 1.0),
+    "broad_noise_scale": 28.0,
+    "broad_noise_detail": 8.0,
+    "broad_bump_strength": 0.0020,
+    "broad_bump_distance": 0.0080,
+    "specular_cap": 0.18,
+}
 
 MODEL_PRESETS = {
     "P101040_blue": {
@@ -57,8 +73,8 @@ MODEL_PRESETS = {
         "family": "qc71336",
         "blend": ASSET_MODEL_DIR / "moxing2.blend",
         "model_blend": ASSET_MODEL_DIR / "QC7-1336-white.blend",
-        "appearance_profile": "qc71336_gray_override_profile",
-        "material_family": "qc71336_gray_override_plastic",
+        "appearance_profile": "qc71336_gray_textured_override_profile",
+        "material_family": "qc71336_gray_textured_override_plastic",
         "use_gray_override": True,
         "radius_scale": (0.0036, 0.0064),
         "depth_scale": (0.00120, 0.00224),
@@ -327,6 +343,126 @@ def add_noise_bump(mat, scale=800.0, strength=0.001, distance=0.0008):
     tree.links.new(mapping.outputs["Vector"], noise.inputs["Vector"])
     tree.links.new(noise.outputs["Fac"], bump.inputs["Height"])
     tree.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
+
+
+def clear_socket_links(tree, socket):
+    for link in list(socket.links):
+        tree.links.remove(link)
+
+
+def apply_qc71336_gray_texture_enhancement(mat):
+    bsdf = find_principled(mat)
+    if bsdf is None or mat.node_tree is None:
+        return {}
+    profile = QC71336_GRAY_TEXTURED_PROFILE
+    tree = mat.node_tree
+    nodes = tree.nodes
+    links = tree.links
+
+    base_input = bsdf.inputs.get("Base Color")
+    roughness_input = bsdf.inputs.get("Roughness")
+    normal_input = bsdf.inputs.get("Normal")
+    if base_input is None or roughness_input is None or normal_input is None:
+        return {}
+
+    spec_name = "Specular IOR Level" if "Specular IOR Level" in bsdf.inputs else "Specular"
+    spec_input = bsdf.inputs.get(spec_name)
+    if spec_input is not None:
+        spec_input.default_value = min(float(spec_input.default_value), profile["specular_cap"])
+
+    clear_socket_links(tree, base_input)
+    clear_socket_links(tree, roughness_input)
+    clear_socket_links(tree, normal_input)
+
+    texcoord = nodes.new("ShaderNodeTexCoord")
+    texcoord.label = "QC71336_GRAY_TEXTURE_OBJECT_COORDS"
+    fine_mapping = nodes.new("ShaderNodeMapping")
+    fine_mapping.label = "QC71336_GRAY_TEXTURE_FINE_MAPPING"
+    fine_noise = nodes.new("ShaderNodeTexNoise")
+    fine_noise.label = "QC71336_GRAY_TEXTURE_FINE_GRAIN_NOISE"
+    rough_ramp = nodes.new("ShaderNodeValToRGB")
+    rough_ramp.label = "QC71336_GRAY_TEXTURE_ROUGHNESS_VARIATION"
+    base_ramp = nodes.new("ShaderNodeValToRGB")
+    base_ramp.label = "QC71336_GRAY_TEXTURE_SUBTLE_COLOR_VARIATION"
+    fine_bump = nodes.new("ShaderNodeBump")
+    fine_bump.label = "QC71336_GRAY_TEXTURE_FINE_GRAIN_BUMP"
+
+    broad_mapping = nodes.new("ShaderNodeMapping")
+    broad_mapping.label = "QC71336_GRAY_TEXTURE_BROAD_MAPPING"
+    broad_noise = nodes.new("ShaderNodeTexNoise")
+    broad_noise.label = "QC71336_GRAY_TEXTURE_BROAD_MOLD_FLOW_NOISE"
+    broad_bump = nodes.new("ShaderNodeBump")
+    broad_bump.label = "QC71336_GRAY_TEXTURE_BROAD_MOLD_FLOW_BUMP"
+
+    fine_mapping.inputs["Scale"].default_value = (
+        profile["fine_noise_scale"],
+        profile["fine_noise_scale"],
+        profile["fine_noise_scale"],
+    )
+    fine_noise.inputs["Scale"].default_value = 1.0
+    fine_noise.inputs["Detail"].default_value = profile["fine_noise_detail"]
+    fine_noise.inputs["Roughness"].default_value = profile["fine_noise_roughness"]
+
+    rough_ramp.color_ramp.elements[0].position = 0.24
+    rough_ramp.color_ramp.elements[0].color = (
+        profile["roughness_low"],
+        profile["roughness_low"],
+        profile["roughness_low"],
+        1.0,
+    )
+    rough_ramp.color_ramp.elements[1].position = 0.82
+    rough_ramp.color_ramp.elements[1].color = (
+        profile["roughness_high"],
+        profile["roughness_high"],
+        profile["roughness_high"],
+        1.0,
+    )
+
+    base_ramp.color_ramp.elements[0].position = 0.18
+    base_ramp.color_ramp.elements[0].color = profile["base_low"]
+    base_ramp.color_ramp.elements[1].position = 0.86
+    base_ramp.color_ramp.elements[1].color = profile["base_high"]
+
+    fine_bump.inputs["Strength"].default_value = profile["bump_strength"]
+    fine_bump.inputs["Distance"].default_value = profile["bump_distance"]
+
+    broad_mapping.inputs["Scale"].default_value = (
+        profile["broad_noise_scale"],
+        profile["broad_noise_scale"],
+        profile["broad_noise_scale"],
+    )
+    broad_noise.inputs["Scale"].default_value = 1.0
+    broad_noise.inputs["Detail"].default_value = profile["broad_noise_detail"]
+    broad_noise.inputs["Roughness"].default_value = 0.55
+    broad_bump.inputs["Strength"].default_value = profile["broad_bump_strength"]
+    broad_bump.inputs["Distance"].default_value = profile["broad_bump_distance"]
+
+    links.new(texcoord.outputs["Object"], fine_mapping.inputs["Vector"])
+    links.new(fine_mapping.outputs["Vector"], fine_noise.inputs["Vector"])
+    links.new(fine_noise.outputs["Fac"], rough_ramp.inputs["Fac"])
+    links.new(fine_noise.outputs["Fac"], base_ramp.inputs["Fac"])
+    links.new(rough_ramp.outputs["Color"], roughness_input)
+    links.new(base_ramp.outputs["Color"], base_input)
+
+    links.new(texcoord.outputs["Object"], broad_mapping.inputs["Vector"])
+    links.new(broad_mapping.outputs["Vector"], broad_noise.inputs["Vector"])
+    links.new(broad_noise.outputs["Fac"], broad_bump.inputs["Height"])
+    links.new(broad_bump.outputs["Normal"], fine_bump.inputs["Normal"])
+    links.new(fine_noise.outputs["Fac"], fine_bump.inputs["Height"])
+    links.new(fine_bump.outputs["Normal"], normal_input)
+
+    mat["qc71336_gray_texture_profile"] = json.dumps(profile, ensure_ascii=False)
+    return {
+        "material": mat.name,
+        "base_color_range": [list(profile["base_low"]), list(profile["base_high"])],
+        "roughness_range": [profile["roughness_low"], profile["roughness_high"]],
+        "fine_noise_scale": profile["fine_noise_scale"],
+        "bump_strength": profile["bump_strength"],
+        "bump_distance": profile["bump_distance"],
+        "broad_noise_scale": profile["broad_noise_scale"],
+        "broad_bump_strength": profile["broad_bump_strength"],
+        "specular": float(spec_input.default_value) if spec_input is not None else None,
+    }
 
 
 def load_external_material_parameters(material_json_path):
@@ -912,7 +1048,6 @@ def tune_prebuilt_white_materials(objects):
 
 def build_qc71336_gray_material():
     mat = make_principled_material("UNIFIED_QC71336_GRAY_OVERRIDE", (0.445, 0.438, 0.432, 1.0), 0.76, 0.26)
-    add_noise_bump(mat, scale=520.0, strength=0.0018, distance=0.0006)
     return mat
 
 
@@ -926,7 +1061,10 @@ def apply_gray_override_material(objects):
             obj.data.energy = float(obj.data.energy) * 0.78
     bpy.context.scene.view_settings.exposure = float(bpy.context.scene.view_settings.exposure) - 0.24
     bpy.context.view_layer.update()
-    return mat.name
+    return {
+        "gray_override_material": mat.name,
+        "gray_texture_material_enhancement": apply_qc71336_gray_texture_enhancement(mat),
+    }
 
 
 def get_primary_object(name_hint="QC7-5236-000N301002ST0101"):
@@ -1386,8 +1524,7 @@ def setup_qc71336(args, preset):
     fit_objects_to_reference(imported, primary_objects, scale_factor=1.0)
     original_materials = summarize_materials(imported)
     if preset.get("use_gray_override"):
-        material_name = apply_gray_override_material(imported)
-        material_info = {"gray_override_material": material_name}
+        material_info = apply_gray_override_material(imported)
     else:
         material_info = tune_prebuilt_white_materials(imported)
     external_material_info = apply_external_visual_material(imported, args.material_json)

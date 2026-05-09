@@ -34,6 +34,23 @@ REPO_ROOT = SCRIPT_ROOT.parent
 ASSET_MODEL_DIR = REPO_ROOT / "assets" / "models"
 DEFAULTS_PATH = SCRIPT_ROOT / "config" / "generation_defaults_registry.json"
 FORCE_GENERIC_CAMERA_KEY = "generic_force_camera"
+QC71336_GRAY_TEXTURED_PROFILE = {
+    "profile": "qc71336_gray_real_reference_textured_v1",
+    "base_low": (0.300, 0.320, 0.325, 1.0),
+    "base_high": (0.470, 0.492, 0.492, 1.0),
+    "roughness_low": 0.76,
+    "roughness_high": 0.98,
+    "fine_noise_scale": 300.0,
+    "fine_noise_detail": 14.0,
+    "fine_noise_roughness": 0.66,
+    "bump_strength": 0.0120,
+    "bump_distance": 0.0040,
+    "broad_noise_scale": 28.0,
+    "broad_noise_detail": 8.0,
+    "broad_bump_strength": 0.0020,
+    "broad_bump_distance": 0.0080,
+    "specular_cap": 0.16,
+}
 
 
 def parse_args():
@@ -73,6 +90,11 @@ def parse_args():
         "--render_class_masks",
         action="store_true",
         help="Diagnostic mode: render one mask per defect class for cooccurrence samples.",
+    )
+    parser.add_argument(
+        "--debug_anchor_overlay",
+        action="store_true",
+        help="Save RGB overlays with defect bbox and procedural anchor point for placement debugging.",
     )
     parser.add_argument("--material_profile", default=None)
     parser.add_argument(
@@ -152,6 +174,7 @@ def main():
     rgb_dir = mkdir(output_dir / "rgb")
     mask_dir = mkdir(output_dir / "mask")
     label_dir = mkdir(output_dir / "labels_yolo")
+    debug_overlay_dir = mkdir(output_dir / "debug_anchor_overlay") if args.debug_anchor_overlay else None
 
     bproc.init()
     product = load_scene_model(args)
@@ -202,12 +225,17 @@ def main():
         bbox = bbox_from_object(camera, defect, args.width, args.height)
         render_mask(mask_path, product, defect)
         write_yolo_label(label_path, args.defect_type, bbox, args.width, args.height)
+        debug_overlay_path = None
+        if debug_overlay_dir is not None:
+            debug_overlay_path = debug_overlay_dir / f"{sample_id:06d}.png"
+            save_debug_anchor_overlay(debug_overlay_path, rgb_path, camera, defect, bbox, args.width, args.height)
         samples.append(
             {
                 "image_id": sample_id,
                 "rgb": str(rgb_path.relative_to(output_dir)),
                 "mask": str(mask_path.relative_to(output_dir)),
                 "label_yolo": str(label_path.relative_to(output_dir)),
+                "debug_anchor_overlay": str(debug_overlay_path.relative_to(output_dir)) if debug_overlay_path else None,
                 "defect_type": args.defect_type,
                 "defect_type_canonical": args.defect_type,
                 "bbox": bbox,
@@ -217,6 +245,7 @@ def main():
                 "view_transform": view_transform,
                 "generic_backend": True,
                 "quality_goal": "coverage_first_not_visual_realism",
+                "defect_debug": defect_debug_metadata(defect),
                 "seed": args.seed + sample_id,
             }
         )
@@ -247,6 +276,43 @@ def main():
         "defaults_registry": str(DEFAULTS_PATH),
     }
     (output_dir / "metadata.json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def defect_debug_metadata(defect):
+    keys = [
+        "smooth_panel_anchor",
+        "anchor_polygon_index",
+        "anchor_local_xyz",
+        "anchor_score",
+        "anchor_view_alignment",
+        "world_point",
+        "world_normal",
+        "style",
+        "qc71336_gray_mixed_color_style",
+        "arc_count",
+        "arc_width",
+        "haze_width",
+        "haze_height",
+        "haze_enabled",
+        "haze_patch_count",
+        "material_alpha_values",
+    ]
+    data = {}
+    for key in keys:
+        if key not in defect:
+            continue
+        value = defect[key]
+        if isinstance(value, Vector):
+            value = [float(item) for item in value]
+        elif hasattr(value, "to_list"):
+            value = value.to_list()
+        elif isinstance(value, str) and key == "material_alpha_values":
+            try:
+                value = json.loads(value)
+            except Exception:
+                pass
+        data[key] = value
+    return data
 
 
 def run_normal_generation(args, output_dir, product, camera, scene_profile, render_device_info):
@@ -426,6 +492,7 @@ def run_cooccurrence_generation(args, defaults, output_dir, product, camera, sce
                     "placement_policy": record["object"].get("placement_policy"),
                     "mask_by_class": record.get("mask_by_class"),
                     "placement_warning": record.get("placement_warning"),
+                    "defect_debug": defect_debug_metadata(record["object"]),
                 }
             )
         sample_record = {
@@ -555,6 +622,7 @@ def run_same_type_multi_generation(args, defaults, output_dir, product, camera, 
                     "placement_policy": record["object"].get("placement_policy"),
                     "mask_by_class": record.get("mask_by_class"),
                     "placement_warning": record.get("placement_warning"),
+                    "defect_debug": defect_debug_metadata(record["object"]),
                 }
             )
         sample_record = {
@@ -1181,6 +1249,127 @@ def add_noise_bump(mat, scale=520.0, strength=0.0018, distance=0.0006):
     tree.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
 
 
+def clear_socket_links(tree, socket):
+    for link in list(socket.links):
+        tree.links.remove(link)
+
+
+def apply_qc71336_gray_texture_enhancement(mat):
+    bsdf = find_principled(mat)
+    if bsdf is None or mat.node_tree is None:
+        return {}
+    profile = QC71336_GRAY_TEXTURED_PROFILE
+    tree = mat.node_tree
+    nodes = tree.nodes
+    links = tree.links
+
+    base_input = bsdf.inputs.get("Base Color")
+    roughness_input = bsdf.inputs.get("Roughness")
+    normal_input = bsdf.inputs.get("Normal")
+    if base_input is None or roughness_input is None or normal_input is None:
+        return {}
+
+    spec_name = "Specular IOR Level" if "Specular IOR Level" in bsdf.inputs else "Specular"
+    spec_input = bsdf.inputs.get(spec_name)
+    if spec_input is not None:
+        spec_input.default_value = min(float(spec_input.default_value), profile["specular_cap"])
+
+    clear_socket_links(tree, base_input)
+    clear_socket_links(tree, roughness_input)
+    clear_socket_links(tree, normal_input)
+
+    texcoord = nodes.new("ShaderNodeTexCoord")
+    texcoord.label = "QC71336_GRAY_TEXTURE_OBJECT_COORDS"
+    fine_mapping = nodes.new("ShaderNodeMapping")
+    fine_mapping.label = "QC71336_GRAY_TEXTURE_FINE_MAPPING"
+    fine_noise = nodes.new("ShaderNodeTexNoise")
+    fine_noise.label = "QC71336_GRAY_TEXTURE_FINE_GRAIN_NOISE"
+    rough_ramp = nodes.new("ShaderNodeValToRGB")
+    rough_ramp.label = "QC71336_GRAY_TEXTURE_ROUGHNESS_VARIATION"
+    base_ramp = nodes.new("ShaderNodeValToRGB")
+    base_ramp.label = "QC71336_GRAY_TEXTURE_SUBTLE_COLOR_VARIATION"
+    fine_bump = nodes.new("ShaderNodeBump")
+    fine_bump.label = "QC71336_GRAY_TEXTURE_FINE_GRAIN_BUMP"
+
+    broad_mapping = nodes.new("ShaderNodeMapping")
+    broad_mapping.label = "QC71336_GRAY_TEXTURE_BROAD_MAPPING"
+    broad_noise = nodes.new("ShaderNodeTexNoise")
+    broad_noise.label = "QC71336_GRAY_TEXTURE_BROAD_MOLD_FLOW_NOISE"
+    broad_bump = nodes.new("ShaderNodeBump")
+    broad_bump.label = "QC71336_GRAY_TEXTURE_BROAD_MOLD_FLOW_BUMP"
+
+    fine_mapping.inputs["Scale"].default_value = (
+        profile["fine_noise_scale"],
+        profile["fine_noise_scale"],
+        profile["fine_noise_scale"],
+    )
+    fine_noise.inputs["Scale"].default_value = 1.0
+    fine_noise.inputs["Detail"].default_value = profile["fine_noise_detail"]
+    fine_noise.inputs["Roughness"].default_value = profile["fine_noise_roughness"]
+
+    rough_ramp.color_ramp.elements[0].position = 0.24
+    rough_ramp.color_ramp.elements[0].color = (
+        profile["roughness_low"],
+        profile["roughness_low"],
+        profile["roughness_low"],
+        1.0,
+    )
+    rough_ramp.color_ramp.elements[1].position = 0.82
+    rough_ramp.color_ramp.elements[1].color = (
+        profile["roughness_high"],
+        profile["roughness_high"],
+        profile["roughness_high"],
+        1.0,
+    )
+
+    base_ramp.color_ramp.elements[0].position = 0.18
+    base_ramp.color_ramp.elements[0].color = profile["base_low"]
+    base_ramp.color_ramp.elements[1].position = 0.86
+    base_ramp.color_ramp.elements[1].color = profile["base_high"]
+
+    fine_bump.inputs["Strength"].default_value = profile["bump_strength"]
+    fine_bump.inputs["Distance"].default_value = profile["bump_distance"]
+
+    broad_mapping.inputs["Scale"].default_value = (
+        profile["broad_noise_scale"],
+        profile["broad_noise_scale"],
+        profile["broad_noise_scale"],
+    )
+    broad_noise.inputs["Scale"].default_value = 1.0
+    broad_noise.inputs["Detail"].default_value = profile["broad_noise_detail"]
+    broad_noise.inputs["Roughness"].default_value = 0.55
+    broad_bump.inputs["Strength"].default_value = profile["broad_bump_strength"]
+    broad_bump.inputs["Distance"].default_value = profile["broad_bump_distance"]
+
+    links.new(texcoord.outputs["Object"], fine_mapping.inputs["Vector"])
+    links.new(fine_mapping.outputs["Vector"], fine_noise.inputs["Vector"])
+    links.new(fine_noise.outputs["Fac"], rough_ramp.inputs["Fac"])
+    links.new(fine_noise.outputs["Fac"], base_ramp.inputs["Fac"])
+    links.new(rough_ramp.outputs["Color"], roughness_input)
+    links.new(base_ramp.outputs["Color"], base_input)
+
+    links.new(texcoord.outputs["Object"], broad_mapping.inputs["Vector"])
+    links.new(broad_mapping.outputs["Vector"], broad_noise.inputs["Vector"])
+    links.new(broad_noise.outputs["Fac"], broad_bump.inputs["Height"])
+    links.new(broad_bump.outputs["Normal"], fine_bump.inputs["Normal"])
+    links.new(fine_noise.outputs["Fac"], fine_bump.inputs["Height"])
+    links.new(fine_bump.outputs["Normal"], normal_input)
+
+    mat["qc71336_gray_texture_profile"] = json.dumps(profile, ensure_ascii=False)
+    return {
+        "profile": profile["profile"],
+        "material": mat.name,
+        "base_color_range": [list(profile["base_low"]), list(profile["base_high"])],
+        "roughness_range": [profile["roughness_low"], profile["roughness_high"]],
+        "fine_noise_scale": profile["fine_noise_scale"],
+        "bump_strength": profile["bump_strength"],
+        "bump_distance": profile["bump_distance"],
+        "broad_noise_scale": profile["broad_noise_scale"],
+        "broad_bump_strength": profile["broad_bump_strength"],
+        "specular": float(spec_input.default_value) if spec_input is not None else None,
+    }
+
+
 def find_background_node(world):
     if world is None or not world.use_nodes or world.node_tree is None:
         return None
@@ -1188,11 +1377,13 @@ def find_background_node(world):
 
 
 def apply_qc71336_gray_override_material(obj):
-    mat = make_basic_principled_material("GENERIC_QC71336_GRAY_OVERRIDE", (0.445, 0.438, 0.432, 1.0), 0.76, 0.26)
-    add_noise_bump(mat, scale=520.0, strength=0.0018, distance=0.0006)
+    mat = make_basic_principled_material("GENERIC_QC71336_GRAY_OVERRIDE", (0.390, 0.412, 0.414, 1.0), 0.90, 0.16)
+    material_info = apply_qc71336_gray_texture_enhancement(mat)
     obj.data.materials.clear()
     obj.data.materials.append(mat)
+    obj["qc71336_gray_material_profile"] = json.dumps(material_info, ensure_ascii=False)
     bpy.context.view_layer.update()
+    return material_info
 
 
 def ensure_material(obj, target, defaults, preserve_existing=False, material_profile=None):
@@ -1200,6 +1391,9 @@ def ensure_material(obj, target, defaults, preserve_existing=False, material_pro
         apply_p101040_reference_material(obj)
         return
     if preserve_existing and obj.data.materials:
+        return
+    if is_qc71336_gray_target(target):
+        apply_qc71336_gray_override_material(obj)
         return
     color = (0.58, 0.60, 0.62, 1.0)
     target_lower = target.lower()
@@ -1985,6 +2179,28 @@ def create_defect(product, target, defect_type, rng, sides, defaults, allow_targ
         obj["world_normal"] = [float(v) for v in anchor["world_normal"]]
         bpy.context.view_layer.update()
         return obj
+    if is_qc71336_gray_target(target) and defect_type == "mixed_color_contamination":
+        anchor = sample_qc71336_gray_smooth_panel_anchor(product, rng, sides or [side])
+        obj = add_qc71336_gray_soft_spiral_mixed_color_defect("GENERIC_DEFECT_MIXED_COLOR", max_dim, rng)
+        obj.location = anchor["world_point"] + anchor["world_normal"] * max(max_dim * 0.00045, 0.00020)
+        obj.rotation_euler = anchor["world_normal"].to_track_quat("Z", "Y").to_euler()
+        obj.rotation_euler.rotate_axis("Z", rng.uniform(-0.55, 0.55))
+        obj["anchor_side"] = anchor["side"]
+        obj["main_plane_axis"] = "z"
+        obj["placement_policy"] = "qc71336_gray_smooth_panel_anchor"
+        obj["defect_type"] = defect_type
+        obj["defect_family"] = "embedded_material_color_mixing"
+        obj["anchor_polygon_index"] = int(anchor["polygon_index"])
+        obj["anchor_score"] = float(anchor["score"])
+        obj["anchor_view_alignment"] = float(anchor["view_alignment"])
+        obj["anchor_local_xyz"] = anchor["local_xyz"]
+        obj["world_point"] = [float(v) for v in anchor["world_point"]]
+        obj["world_normal"] = [float(v) for v in anchor["world_normal"]]
+        obj["smooth_panel_anchor"] = True
+        materials = make_qc71336_gray_mixed_color_materials()
+        apply_qc71336_gray_mixed_color_materials(obj, materials)
+        bpy.context.view_layer.update()
+        return obj
     frame = placement_frame_for_target(min_v, max_v, target, side)
     if is_ql3_target(target) and defect_type == "splay":
         frame["normalized_ranges"] = {
@@ -2091,6 +2307,9 @@ def create_defect(product, target, defect_type, rng, sides, defaults, allow_targ
         scale_defect_object(obj, size_scale)
     obj.location = Vector(coords)
     align_plane_to_normal(obj, axis_unit(normal_axis, sign))
+    if is_qc71336_gray_target(target) and defect_type == "mixed_color_contamination":
+        # Keep the decal-like stain just above the product surface so RGB renders do not lose it to coplanar depth sorting.
+        obj.location = obj.location + axis_unit(normal_axis, sign) * max(max_dim * 0.00045, 0.00020)
     if is_qc7_5244_black_target(target) and defect_type == "splay":
         obj.rotation_euler.rotate_axis("Z", math.pi * 0.5 + rng.uniform(-0.18, 0.18))
     obj["anchor_side"] = side
@@ -2108,18 +2327,7 @@ def create_defect(product, target, defect_type, rng, sides, defaults, allow_targ
             mesh_obj.data.materials.append(core_material if mesh_obj.name.endswith("_CORE") else halo_material)
     elif is_qc71336_gray_target(target) and defect_type == "mixed_color_contamination":
         materials = make_qc71336_gray_mixed_color_materials()
-        for mesh_obj in defect_mesh_objects(obj):
-            if mesh_obj.name.endswith("_BASE"):
-                mesh_obj.data.materials.append(materials["center"])
-                mesh_obj.data.materials.append(materials["mid"])
-                mesh_obj.data.materials.append(materials["edge"])
-            elif mesh_obj.name.endswith("_MID"):
-                mesh_obj.data.materials.append(materials["mid"])
-            elif mesh_obj.name.endswith("_CENTER"):
-                mesh_obj.data.materials.append(materials["center"])
-            else:
-                mesh_obj.data.materials.append(materials["edge"])
-            mesh_obj.visible_shadow = False
+        apply_qc71336_gray_mixed_color_materials(obj, materials)
     else:
         defect_material = make_defect_material(defect_type, defect_defaults, product, target)
         for mesh_obj in defect_mesh_objects(obj):
@@ -2175,6 +2383,68 @@ def sample_qc71336_gray_reference_anchor(product, rng, allowed_sides):
         raise RuntimeError(f"No stable QC71336 gray reference anchor found for sides={sorted(allowed_sides)}.")
     candidates.sort(key=lambda item: item["score"], reverse=True)
     shortlist = candidates[: min(48, len(candidates))]
+    floor = shortlist[-1]["score"]
+    weights = [max(item["score"] - floor + 0.02, 0.002) for item in shortlist]
+    return rng.choices(shortlist, weights=weights, k=1)[0]
+
+
+def sample_qc71336_gray_smooth_panel_anchor(product, rng, allowed_sides):
+    allowed_sides = set(allowed_sides or ["front"])
+    min_v, max_v = world_bbox(product)
+    center = (min_v + max_v) * 0.5
+    dims = max_v - min_v
+    half_x = max(abs(float(dims.x)) * 0.5, 1e-6)
+    half_y = max(abs(float(dims.y)) * 0.5, 1e-6)
+    half_z = max(abs(float(dims.z)) * 0.5, 1e-6)
+    camera_presets = build_qc71336_gray_reference_camera_presets(product)
+    normal_matrix = product.matrix_world.to_3x3()
+    areas = sorted(max(float(poly.area), 1e-10) for poly in product.data.polygons)
+    area_floor = max(areas[min(len(areas) - 1, max(0, int(len(areas) * 0.35)))] * 0.50, areas[-1] * 0.00008)
+    candidates = []
+    for poly in product.data.polygons:
+        world_center = product.matrix_world @ poly.center
+        normal = (normal_matrix @ poly.normal).normalized()
+        side = "front" if normal.z >= 0.68 else ("back" if normal.z <= -0.68 else None)
+        if side not in allowed_sides:
+            continue
+        local_x = float(world_center.x - center.x) / half_x
+        local_y = float(world_center.y - center.y) / half_y
+        local_z = float(world_center.z - center.z) / half_z
+        # Smooth central panel band. This avoids the upper dotted/pebbled field, outer hooks,
+        # raised borders, and the lower logo/edge region while staying on the broad flat face.
+        if not (-0.18 <= local_x <= 0.34 and -0.50 <= local_y <= -0.34):
+            continue
+        if max(float(poly.area), 1e-10) < area_floor:
+            continue
+        camera_location = camera_presets[side]["location"]
+        view_alignment = float(normal.dot((camera_location - world_center).normalized()))
+        if view_alignment < 0.24:
+            continue
+        flatness_score = max(0.0, min(1.0, (abs(normal.z) - 0.68) / 0.30))
+        panel_center_score = max(0.0, 1.0 - (abs(local_x - 0.06) * 1.55 + abs(local_y + 0.42) * 1.65))
+        edge_penalty = max(0.0, abs(local_x - 0.06) - 0.20) + max(0.0, abs(local_y + 0.42) - 0.07)
+        score = (
+            panel_center_score * 1.85
+            + flatness_score * 0.75
+            + min(float(poly.area) / area_floor, 3.0) * 0.12
+            - edge_penalty * 1.35
+            + rng.random() * 0.10
+        )
+        candidates.append(
+            {
+                "polygon_index": poly.index,
+                "world_point": world_center,
+                "world_normal": normal,
+                "side": side,
+                "score": score,
+                "local_xyz": [float(local_x), float(local_y), float(local_z)],
+                "view_alignment": view_alignment,
+            }
+        )
+    if not candidates:
+        raise RuntimeError(f"No QC71336 gray smooth-panel mixed-color anchor found for sides={sorted(allowed_sides)}.")
+    candidates.sort(key=lambda item: item["score"], reverse=True)
+    shortlist = candidates[: min(18, len(candidates))]
     floor = shortlist[-1]["score"]
     weights = [max(item["score"] - floor + 0.02, 0.002) for item in shortlist]
     return rng.choices(shortlist, weights=weights, k=1)[0]
@@ -2776,83 +3046,252 @@ def add_qc7_black_splay_defect(name, max_dim, rng):
     return obj
 
 
+def add_open_spiral_arc_stain(
+    name,
+    radius_x,
+    radius_y,
+    width,
+    rng,
+    turns=None,
+    start_radius=0.34,
+    end_radius=1.0,
+    break_probability=0.10,
+):
+    mesh = bpy.data.meshes.new(name + "_MESH")
+    verts = []
+    faces = []
+    segments = rng.randint(50, 76)
+    handedness = -1.0 if rng.random() < 0.5 else 1.0
+    phase = rng.uniform(-0.28, 0.28) * math.pi
+    turns = rng.uniform(0.42, 0.74) if turns is None else turns
+    center_bias_x = rng.uniform(-0.055, 0.065) * radius_x
+    center_bias_y = rng.uniform(-0.045, 0.060) * radius_y
+    curve_phase = rng.uniform(0.0, math.tau)
+
+    for index in range(segments):
+        t = index / max(segments - 1, 1)
+        eased = t * t * (3.0 - 2.0 * t)
+        local_radius = start_radius + (end_radius - start_radius) * eased
+        angle = phase + handedness * (t * turns * math.tau)
+        wave = 1.0 + 0.045 * math.sin(t * math.tau * 2.4 + curve_phase) + rng.uniform(-0.018, 0.018)
+        x = center_bias_x + math.cos(angle) * radius_x * local_radius * wave
+        y = center_bias_y + math.sin(angle) * radius_y * local_radius * wave
+        tangent_angle = angle + handedness * math.pi * 0.5
+        nx = math.cos(tangent_angle + math.pi * 0.5)
+        ny = math.sin(tangent_angle + math.pi * 0.5)
+        taper = max(0.18, math.sin(math.pi * max(0.02, min(0.98, t))) ** 0.62)
+        half_width = width * taper * rng.uniform(0.72, 1.26)
+        lateral_jitter = rng.uniform(-0.16, 0.16) * width
+        verts.append((x + nx * (half_width + lateral_jitter), y + ny * (half_width + lateral_jitter), 0.0))
+        verts.append((x - nx * (half_width - lateral_jitter), y - ny * (half_width - lateral_jitter), 0.0))
+
+    gap_run = 0
+    for index in range(segments - 1):
+        if rng.random() < break_probability and gap_run < 2:
+            gap_run += 1
+            continue
+        gap_run = 0
+        a = index * 2
+        faces.append((a, a + 1, a + 3, a + 2))
+        faces.append((a, a + 2, a + 3, a + 1))
+    mesh.from_pydata(verts, [], faces)
+    mesh.update()
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    return obj
+
+
+def add_qc71336_gray_mixed_color_haze(name, width, height, rng):
+    mesh = bpy.data.meshes.new(name + "_MESH")
+    vertex_count = rng.randint(42, 62)
+    verts = [(0.0, 0.0, 0.0)]
+    inner_ring = []
+    outer_ring = []
+    wave_freq = rng.uniform(1.2, 2.4)
+    wave_phase = rng.uniform(0.0, math.tau)
+    for index in range(vertex_count):
+        angle = math.tau * index / vertex_count
+        wave = 1.0 + 0.070 * math.sin(angle * wave_freq + wave_phase) + rng.uniform(-0.035, 0.040)
+        inner_ring.append(len(verts))
+        verts.append((math.cos(angle) * width * 0.24 * wave, math.sin(angle) * height * 0.24 * wave, 0.0))
+        outer_ring.append(len(verts))
+        verts.append((math.cos(angle) * width * 0.50 * wave, math.sin(angle) * height * 0.50 * wave, 0.0))
+    faces = []
+    for index in range(vertex_count):
+        nxt = (index + 1) % vertex_count
+        faces.append((0, inner_ring[index], inner_ring[nxt]))
+        faces.append((inner_ring[index], outer_ring[index], outer_ring[nxt], inner_ring[nxt]))
+    mesh.from_pydata(verts, [], faces)
+    mesh.update()
+    for polygon_index, polygon in enumerate(mesh.polygons):
+        polygon.material_index = 0 if polygon_index % 2 == 0 else 1
+        polygon.use_smooth = True
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    return obj
+
+
+def add_feathered_arc_stain(
+    name,
+    radius_x,
+    radius_y,
+    width,
+    theta_start,
+    theta_end,
+    rng,
+    band_count=7,
+    segment_count=64,
+    wobble_strength=0.015,
+    radial_start_scale=1.0,
+    radial_end_scale=1.0,
+    center_jitter_strength=0.006,
+):
+    mesh = bpy.data.meshes.new(name + "_MESH")
+    band_count = max(5, int(band_count) | 1)
+    segment_count = max(24, int(segment_count))
+    verts = []
+    faces = []
+    material_indices = []
+    wave_phase = rng.uniform(0.0, math.tau)
+    center_jitter_x = rng.uniform(-center_jitter_strength, center_jitter_strength) * radius_x
+    center_jitter_y = rng.uniform(-center_jitter_strength, center_jitter_strength) * radius_y
+    for segment_index in range(segment_count + 1):
+        t = segment_index / max(segment_count, 1)
+        theta = theta_start + (theta_end - theta_start) * t
+        radial_scale = radial_start_scale + (radial_end_scale - radial_start_scale) * t
+        wobble = 1.0 + wobble_strength * math.sin(t * math.tau * 1.35 + wave_phase) + rng.uniform(-wobble_strength, wobble_strength) * 0.12
+        x = center_jitter_x + math.cos(theta) * radius_x * radial_scale * wobble
+        y = center_jitter_y + math.sin(theta) * radius_y * radial_scale * wobble
+        dx = -math.sin(theta) * radius_x
+        dy = math.cos(theta) * radius_y
+        tangent_len = max(math.sqrt(dx * dx + dy * dy), 1e-6)
+        nx = -dy / tangent_len
+        ny = dx / tangent_len
+        taper = max(0.26, math.sin(math.pi * max(0.02, min(0.98, t))) ** 0.38)
+        local_width = width * taper * rng.uniform(0.975, 1.025)
+        for band_index in range(band_count + 1):
+            u = band_index / max(band_count, 1)
+            offset = (u - 0.5) * local_width
+            verts.append((x + nx * offset, y + ny * offset, 0.0))
+    row = band_count + 1
+    center_band = band_count / 2.0
+    for segment_index in range(segment_count):
+        for band_index in range(band_count):
+            a = segment_index * row + band_index
+            faces.append((a, a + 1, a + row + 1, a + row))
+            distance = abs((band_index + 0.5) - center_band) / max(center_band, 1.0)
+            face_t = (segment_index + 0.5) / max(segment_count, 1)
+            end_fade = math.sin(math.pi * max(0.0, min(1.0, face_t)))
+            if distance < 0.24:
+                material_index = 3
+            elif distance < 0.55:
+                material_index = 2
+            elif distance < 0.78:
+                material_index = 1
+            else:
+                material_index = 0
+            if end_fade < 0.32:
+                material_index = max(0, material_index - 2)
+            elif end_fade < 0.52:
+                material_index = max(0, material_index - 1)
+            material_indices.append(material_index)
+    mesh.from_pydata(verts, [], faces)
+    mesh.update()
+    for polygon, material_index in zip(mesh.polygons, material_indices):
+        polygon.material_index = material_index
+        polygon.use_smooth = True
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    return obj
+
+
 def add_qc71336_gray_soft_spiral_mixed_color_defect(name, max_dim, rng):
     parent = bpy.data.objects.new(name, None)
     bpy.context.collection.objects.link(parent)
     parent["defect_group"] = True
+    parent["qc71336_gray_mixed_color_style"] = "thin_interrupted_spiral_with_local_haze"
 
-    base = add_soft_irregular_mixed_color_patch(
-        f"{name}_BASE",
-        max_dim * rng.uniform(0.046, 0.070),
-        max_dim * rng.uniform(0.032, 0.050),
-        rng,
-    )
-    base.parent = parent
-    base.location = (
-        rng.uniform(-0.018, 0.018) * max_dim,
-        rng.uniform(-0.016, 0.018) * max_dim,
-        0.0,
-    )
-    base.rotation_euler.rotate_axis("Z", rng.uniform(-0.26, 0.26))
+    # The real QC71336 gray mixed-color sample has faint cloudy contamination
+    # hugging the spiral residue, but not one large standalone filled patch.
+    haze_width = 0.0
+    haze_height = 0.0
+    haze_patch_count = 0
 
-    arc_count = rng.randint(2, 4)
+    arc_count = rng.choice([5, 5, 6, 6])
+    arc_width = max_dim * rng.uniform(0.0042, 0.0078)
+    haze_width = arc_width * rng.uniform(4.2, 6.8)
+    haze_height = arc_width * rng.uniform(2.8, 4.8)
+    base_radius_x = max_dim * rng.uniform(0.270, 0.390)
+    base_radius_y = max_dim * rng.uniform(0.175, 0.270)
+    handedness = -1.0 if rng.random() < 0.5 else 1.0
+    theta_cursor = rng.uniform(-0.30, 0.30) + rng.choice([0.0, math.pi])
+    orientation = rng.uniform(-0.34, 0.34)
+    radial_cursor = rng.uniform(0.21, 0.30)
+    radial_step = rng.uniform(0.055, 0.085)
     for arc_index in range(arc_count):
-        radius_x = max_dim * rng.uniform(0.026, 0.045)
-        radius_y = max_dim * rng.uniform(0.038, 0.064)
-        center_offset = (
-            rng.uniform(-0.030, 0.035) * max_dim,
-            rng.uniform(-0.020, 0.028) * max_dim,
-            (arc_index + 1) * max_dim * 0.000012,
-        )
-        edge_arc = add_segmented_arc_stain(
-            f"{name}_ARC_{arc_index:02d}_EDGE",
-                radius_x,
-                radius_y,
-                max_dim * rng.uniform(0.0034, 0.0056),
-            rng,
-            segment_count=rng.randint(1, 3),
-            soften=True,
-        )
-        edge_arc.parent = parent
-        edge_arc.location = center_offset
-        edge_arc.rotation_euler.rotate_axis("Z", rng.uniform(-0.38, 0.38))
-
-        if rng.random() < 0.72:
-            mid_arc = add_segmented_arc_stain(
-                f"{name}_ARC_{arc_index:02d}_MID",
-                radius_x * rng.uniform(0.96, 1.03),
-                radius_y * rng.uniform(0.96, 1.03),
-                max_dim * rng.uniform(0.0014, 0.0026),
+        arc_span = math.radians(rng.uniform(54.0, 94.0))
+        gap_span = math.radians(rng.uniform(13.0, 31.0))
+        theta_start = theta_cursor + handedness * rng.uniform(-0.05, 0.05)
+        theta_end = theta_start + handedness * arc_span
+        radial_start = radial_cursor + rng.uniform(-0.018, 0.018)
+        radial_end = radial_start + rng.uniform(0.055, 0.105)
+        if rng.random() < 0.92:
+            haze_arc = add_feathered_arc_stain(
+                f"{name}_CLOUD_ARC_{arc_index:02d}",
+                base_radius_x,
+                base_radius_y,
+                arc_width * rng.uniform(1.9, 2.9),
+                theta_start + handedness * rng.uniform(-0.05, 0.04),
+                theta_end + handedness * rng.uniform(-0.04, 0.05),
                 rng,
-                segment_count=rng.randint(1, 2),
-                soften=True,
+                band_count=9,
+                segment_count=rng.randint(48, 76),
+                wobble_strength=rng.uniform(0.012, 0.026),
+                radial_start_scale=radial_start + rng.uniform(-0.020, 0.015),
+                radial_end_scale=radial_end + rng.uniform(-0.015, 0.020),
+                center_jitter_strength=0.004,
             )
-            mid_arc.parent = parent
-            mid_arc.location = (
-                center_offset[0] + rng.uniform(-0.006, 0.006) * max_dim,
-                center_offset[1] + rng.uniform(-0.006, 0.006) * max_dim,
-                center_offset[2] + max_dim * 0.000010,
+            haze_arc.parent = parent
+            haze_arc["support_artifact_role"] = "mixed_color_local_cloud_haze_visual_only"
+            haze_arc.location = (
+                rng.uniform(-0.003, 0.003) * max_dim,
+                rng.uniform(-0.003, 0.003) * max_dim,
+                max_dim * (0.000008 + arc_index * 0.000010),
             )
-            mid_arc.rotation_euler = edge_arc.rotation_euler
-
-    if rng.random() < 0.55:
-        center = add_segmented_arc_stain(
-            f"{name}_CENTER",
-            max_dim * rng.uniform(0.020, 0.031),
-            max_dim * rng.uniform(0.027, 0.041),
-            max_dim * rng.uniform(0.0005, 0.0010),
+            haze_arc.rotation_euler.rotate_axis("Z", orientation + rng.uniform(-0.030, 0.030))
+            haze_patch_count += 1
+        arc = add_feathered_arc_stain(
+            f"{name}_FEATHERED_ARC_{arc_index:02d}",
+            base_radius_x,
+            base_radius_y,
+            arc_width * rng.uniform(0.72, 1.04),
+            theta_start,
+            theta_end,
             rng,
-            segment_count=rng.randint(1, 2),
-            soften=True,
+            band_count=9,
+            segment_count=rng.randint(74, 112),
+            wobble_strength=rng.uniform(0.006, 0.016),
+            radial_start_scale=radial_start,
+            radial_end_scale=radial_end,
+            center_jitter_strength=0.0015,
         )
-        center.parent = parent
-        center.location = (
-            rng.uniform(-0.010, 0.012) * max_dim,
-            rng.uniform(-0.008, 0.012) * max_dim,
-            max_dim * 0.000080,
+        arc.parent = parent
+        arc.location = (
+            rng.uniform(-0.002, 0.002) * max_dim,
+            rng.uniform(-0.002, 0.002) * max_dim,
+            max_dim * (0.000028 + arc_index * 0.000012),
         )
-        center.rotation_euler.rotate_axis("Z", rng.uniform(-0.20, 0.20))
+        arc.rotation_euler.rotate_axis("Z", orientation + rng.uniform(-0.018, 0.018))
+        theta_cursor = theta_end + handedness * gap_span
+        radial_cursor += radial_step * rng.uniform(0.82, 1.18)
 
+    parent["style"] = "thin_interrupted_spiral_with_local_haze"
+    parent["arc_count"] = int(arc_count)
+    parent["arc_width"] = float(arc_width)
+    parent["haze_width"] = float(haze_width)
+    parent["haze_height"] = float(haze_height)
+    parent["haze_enabled"] = True
+    parent["haze_patch_count"] = int(haze_patch_count)
     parent.rotation_euler.rotate_axis("Z", rng.uniform(-0.10, 0.10))
     return parent
 
@@ -3090,29 +3529,96 @@ def make_translucent_defect_material(name, base_color, alpha, roughness):
 
 
 def make_qc71336_gray_mixed_color_materials():
-    center = make_translucent_defect_material(
-        "GENERIC_QC71336_GRAY_MIXED_CENTER_MAT",
-        (0.325, 0.330, 0.320, 1.0),
-        0.105,
-        0.94,
+    base_grey = (0.390, 0.412, 0.414)
+    haze = make_translucent_defect_material(
+        "GENERIC_QC71336_GRAY_MIXED_HAZE_MAT",
+        tuple(channel * 0.840 for channel in base_grey) + (1.0,),
+        0.018,
+        0.99,
+    )
+    haze_outer = make_translucent_defect_material(
+        "GENERIC_QC71336_GRAY_MIXED_HAZE_OUTER_MAT",
+        tuple(channel * 0.920 for channel in base_grey) + (1.0,),
+        0.006,
+        0.99,
+    )
+    mist = make_translucent_defect_material(
+        "GENERIC_QC71336_GRAY_MIXED_ARC_MIST_MAT",
+        tuple(channel * 0.790 for channel in base_grey) + (1.0,),
+        0.030,
+        0.99,
+    )
+    outer = make_translucent_defect_material(
+        "GENERIC_QC71336_GRAY_MIXED_OUTER_FEATHER_MAT",
+        tuple(channel * 0.680 for channel in base_grey) + (1.0,),
+        0.064,
+        0.99,
     )
     mid = make_translucent_defect_material(
-        "GENERIC_QC71336_GRAY_MIXED_MID_MAT",
-        (0.360, 0.358, 0.342, 1.0),
-        0.065,
-        0.96,
+        "GENERIC_QC71336_GRAY_MIXED_MID_FEATHER_MAT",
+        tuple(channel * 0.560 for channel in base_grey) + (1.0,),
+        0.118,
+        0.99,
     )
-    edge = make_translucent_defect_material(
-        "GENERIC_QC71336_GRAY_MIXED_EDGE_MAT",
-        (0.405, 0.398, 0.380, 1.0),
-        0.032,
-        0.98,
+    core = make_translucent_defect_material(
+        "GENERIC_QC71336_GRAY_MIXED_CORE_FEATHER_MAT",
+        tuple(channel * 0.470 for channel in base_grey) + (1.0,),
+        0.185,
+        0.99,
     )
+    for mat in (haze, haze_outer, mist, outer, mid, core):
+        bsdf = mat.node_tree.nodes.get("Principled BSDF") if mat.use_nodes else None
+        if bsdf is not None:
+            if "Specular IOR Level" in bsdf.inputs:
+                bsdf.inputs["Specular IOR Level"].default_value = 0.02
+            elif "Specular" in bsdf.inputs:
+                bsdf.inputs["Specular"].default_value = 0.02
     return {
-        "center": center,
+        "haze": haze,
+        "haze_outer": haze_outer,
+        "mist": mist,
+        "outer": outer,
         "mid": mid,
-        "edge": edge,
+        "core": core,
+        "alpha_values": {
+            "haze": 0.018,
+            "haze_outer": 0.006,
+            "mist": 0.030,
+            "outer": 0.064,
+            "mid": 0.118,
+            "core": 0.185,
+        },
     }
+
+
+def apply_qc71336_gray_mixed_color_materials(obj, materials):
+    obj["material_alpha_values"] = json.dumps(materials.get("alpha_values", {}), ensure_ascii=False)
+    for mesh_obj in defect_mesh_objects(obj, include_support=True):
+        mesh_obj.data.materials.clear()
+        if "_HAZE" in mesh_obj.name:
+            mesh_obj.data.materials.append(materials["haze"])
+            mesh_obj.data.materials.append(materials["haze_outer"])
+        elif "_CLOUD_ARC_" in mesh_obj.name:
+            mesh_obj.data.materials.append(materials["haze_outer"])
+            mesh_obj.data.materials.append(materials["haze"])
+            mesh_obj.data.materials.append(materials["haze"])
+            mesh_obj.data.materials.append(materials["haze_outer"])
+        elif "_FEATHERED_ARC_" in mesh_obj.name:
+            mesh_obj.data.materials.append(materials["mist"])
+            mesh_obj.data.materials.append(materials["outer"])
+            mesh_obj.data.materials.append(materials["mid"])
+            mesh_obj.data.materials.append(materials["core"])
+        elif mesh_obj.name.endswith("_BASE"):
+            mesh_obj.data.materials.append(materials["haze"])
+            mesh_obj.data.materials.append(materials["mid"])
+            mesh_obj.data.materials.append(materials["core"])
+        elif mesh_obj.name.endswith("_MID"):
+            mesh_obj.data.materials.append(materials["mid"])
+        elif mesh_obj.name.endswith("_CENTER"):
+            mesh_obj.data.materials.append(materials["core"])
+        else:
+            mesh_obj.data.materials.append(materials["outer"])
+        mesh_obj.visible_shadow = False
 
 
 def material_average_value(mat):
@@ -3229,6 +3735,64 @@ def write_empty_mask(path, width, height):
     image = bpy.data.images.new("GENERIC_EMPTY_MASK", width=int(width), height=int(height), alpha=False)
     try:
         image.pixels.foreach_set([0.0, 0.0, 0.0, 1.0] * int(width) * int(height))
+        image.filepath_raw = str(path)
+        image.file_format = "PNG"
+        image.save()
+    finally:
+        bpy.data.images.remove(image)
+
+
+def save_debug_anchor_overlay(path, rgb_path, camera, defect, bbox, width, height):
+    image = bpy.data.images.load(str(rgb_path), check_existing=False)
+    image_width = int(image.size[0])
+    image_height = int(image.size[1])
+    pixels = list(image.pixels[:])
+    if image_width != int(width) or image_height != int(height):
+        width = image_width
+        height = image_height
+
+    def set_pixel(x, y, color):
+        x = int(round(x))
+        y = int(round(y))
+        if x < 0 or y < 0 or x >= width or y >= height:
+            return
+        index = ((height - 1 - y) * width + x) * 4
+        alpha = color[3]
+        pixels[index + 0] = pixels[index + 0] * (1.0 - alpha) + color[0] * alpha
+        pixels[index + 1] = pixels[index + 1] * (1.0 - alpha) + color[1] * alpha
+        pixels[index + 2] = pixels[index + 2] * (1.0 - alpha) + color[2] * alpha
+        pixels[index + 3] = 1.0
+
+    def draw_line(x0, y0, x1, y1, color):
+        steps = max(abs(int(round(x1 - x0))), abs(int(round(y1 - y0))), 1)
+        for step in range(steps + 1):
+            t = step / steps
+            set_pixel(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, color)
+
+    x, y, w, h = bbox["xywh"]
+    x0 = x
+    x1 = x + w
+    y0 = y
+    y1 = y + h
+    for offset in range(3):
+        draw_line(x0, y0 + offset, x1, y0 + offset, (1.0, 0.08, 0.04, 0.90))
+        draw_line(x0, y1 - offset, x1, y1 - offset, (1.0, 0.08, 0.04, 0.90))
+        draw_line(x0 + offset, y0, x0 + offset, y1, (1.0, 0.08, 0.04, 0.90))
+        draw_line(x1 - offset, y0, x1 - offset, y1, (1.0, 0.08, 0.04, 0.90))
+
+    world_point = defect.get("world_point")
+    if world_point:
+        co_ndc = world_to_camera_view(bpy.context.scene, camera, Vector(world_point))
+        anchor_x = float(co_ndc.x) * width
+        anchor_y = (1.0 - float(co_ndc.y)) * height
+        for radius in range(11):
+            set_pixel(anchor_x - radius, anchor_y, (0.1, 0.45, 1.0, 0.95))
+            set_pixel(anchor_x + radius, anchor_y, (0.1, 0.45, 1.0, 0.95))
+            set_pixel(anchor_x, anchor_y - radius, (0.1, 0.45, 1.0, 0.95))
+            set_pixel(anchor_x, anchor_y + radius, (0.1, 0.45, 1.0, 0.95))
+
+    try:
+        image.pixels[:] = pixels
         image.filepath_raw = str(path)
         image.file_format = "PNG"
         image.save()

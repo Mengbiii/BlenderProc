@@ -1,6 +1,6 @@
 # Current Project Handoff
 
-Last updated: 2026-05-07
+Last updated: 2026-05-09
 
 This handoff is for the next maintenance session. The current project is a
 BlenderProc-based synthetic defect dataset generator for plastic workpieces.
@@ -15,6 +15,107 @@ defect_dataset_generator/docs/SYSTEM_USAGE_GUIDE.md
 defect_dataset_generator/docs/NEXT_HANDOFF_2026_05_04.md
 defect_dataset_generator/docs/FINAL_PACKAGE_CONTENTS.md
 ```
+
+## 2026-05-09 QC71336 Gray Material And Mixed-Color Handoff
+
+The latest active work focused on `qc71336_gray`, especially the gray material
+and `mixed_color_contamination` appearance. The main edited script is:
+
+```text
+defect_dataset_generator/blender_scripts/render_qc71336_gray_defects.py
+```
+
+Current routing expectations:
+
+- `qc71336_gray` single `black_dot` still uses
+  `examples/my_project/reference_blend_blackdot_multi_model.py`.
+- `qc71336_gray` single `mixed_color_contamination` uses
+  `defect_dataset_generator/blender_scripts/render_qc71336_gray_defects.py`.
+- `qc71336_gray` same-scene `black_dot + mixed_color_contamination` also uses
+  `render_qc71336_gray_defects.py`.
+- The dedicated script validates the target name as `qc71336_gray`; commands
+  using `qc71336-grey` fail validation.
+
+Gray material status:
+
+- `render_qc71336_gray_defects.py` now applies a target-specific textured gray
+  override through `QC71336_GRAY_TEXTURED_PROFILE`.
+- The material is intentionally cool light gray, high roughness, low specular,
+  with fine noise/bump and broader low-frequency variation to mimic the real
+  QC71336 gray surface.
+- The reference real gray image used in the latest discussion is the normal
+  QC71336 gray real photo named `9K9A0362.JPG` under the real-data
+  `QC71336 gray / normal` folder.
+
+Mixed-color defect status:
+
+- The accepted direction is a very subtle material-color residue on the smooth
+  central gray panel, not the dotted/pebbled outer texture field.
+- `create_defect()` now routes `qc71336_gray + mixed_color_contamination`
+  through `sample_qc71336_gray_smooth_panel_anchor(...)`, instead of the generic
+  normalized bbox placement window. This sampler records `smooth_panel_anchor`,
+  `anchor_polygon_index`, `anchor_local_xyz`, `world_point`, and
+  `world_normal` in metadata.
+- The current procedural style is
+  `thin_interrupted_spiral_with_local_haze`: several long, thin, open arc
+  segments arranged as an interrupted spiral. It should read as smooth faint
+  injection-molding flow residue, not as a closed ring, scratch, black stain, or
+  chunky decal.
+- The line geometry is built with `add_feathered_arc_stain(...)`. Recent tuning
+  reduced random jitter and width noise so arcs are smoother, with only slight
+  diffusion at the edge.
+- The previous standalone large mixed-color patch is no longer used as an
+  isolated blob. Instead, faint `CLOUD_ARC` support meshes wrap each arc
+  locally as a cloudy base. These support meshes are visible in RGB but tagged
+  with `support_artifact_role`, so `defect_mesh_objects()` excludes them from
+  mask and bbox calculations unless explicitly requested.
+- `make_qc71336_gray_mixed_color_materials()` is now intentionally very low
+  contrast. Current alpha values are:
+  `haze=0.018`, `haze_outer=0.006`, `mist=0.030`, `outer=0.064`,
+  `mid=0.118`, `core=0.185`.
+- A small normal-direction lift is applied for QC71336 gray mixed-color decals
+  so RGB renders do not lose them to coplanar depth sorting.
+- `--debug_anchor_overlay` can save an RGB overlay with the bbox and procedural
+  anchor point for placement debugging.
+
+Latest validation command:
+
+```text
+D:/Anaconda/envs/defect_eval/python.exe -m py_compile E:/BlenderProject/BlenderProc/defect_dataset_generator/blender_scripts/render_qc71336_gray_defects.py
+```
+
+Latest visual check output:
+
+```text
+examples/my_project/QC71336_GRAY_MIXEDCOLOR_THIN_SPIRAL_LOCAL_HAZE_V20/rgb/000000.png
+examples/my_project/QC71336_GRAY_MIXEDCOLOR_THIN_SPIRAL_LOCAL_HAZE_V20/rgb/000001.png
+examples/my_project/QC71336_GRAY_MIXEDCOLOR_THIN_SPIRAL_LOCAL_HAZE_V20/mask/000000.png
+examples/my_project/QC71336_GRAY_MIXEDCOLOR_THIN_SPIRAL_LOCAL_HAZE_V20/mask/000001.png
+```
+
+Interpretation of the latest preview:
+
+- The accepted geometry is the V20 family: thin, long, interrupted spiral arcs
+  on the smooth panel with local haze. After V20, contrast was lowered further
+  and arc jitter was smoothed, but no placement or mask/bbox logic was changed.
+- The final target is intentionally subtle; the user wants low-contrast
+  gray-on-gray mixed-color flow residue. Do not raise visibility by making the
+  line black or thick.
+- If further tuning is needed, first adjust arc scale/count/alpha in
+  `add_qc71336_gray_soft_spiral_mixed_color_defect()` and
+  `make_qc71336_gray_mixed_color_materials()`. Avoid changing placement policy,
+  black-dot routing, or mask support filtering unless the user explicitly asks.
+
+Other touched files in the working tree:
+
+```text
+examples/my_project/reference_blend_blackdot_multi_model.py
+examples/my_project/reference_blend_qc71336_white_prebuilt_normal_debug.py
+```
+
+The user said changes to `reference_blend_blackdot_multi_model.py` are okay
+because QC71336 gray black-dot generation still uses that route. Do not revert
+these files blindly; inspect the diff and preserve user/session changes.
 
 ## 2026-05-07 Dedicated Script Routing Update
 

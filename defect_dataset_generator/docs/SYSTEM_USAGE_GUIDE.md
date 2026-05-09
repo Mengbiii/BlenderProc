@@ -1,6 +1,6 @@
 # Synthetic Defect Dataset Generator Usage Guide
 
-Last updated: 2026-05-07
+Last updated: 2026-05-09
 
 This guide is the current practical usage document for the BlenderProc-based
 plastic-part defect dataset generator. It is written for the next operator or
@@ -304,6 +304,33 @@ QC71336 gray note: single black-dot generation uses the reference black-dot
 script. The same-scene black-dot+mixed-color route uses the dedicated gray
 script and keeps an internal black-dot implementation aligned to the reference
 surface-anchor and tabletop-support behavior.
+
+Current QC71336 gray mixed-color visual note, updated 2026-05-09: the dedicated
+gray script now uses a textured cool-gray material override and a
+QC71336-specific smooth-panel anchor sampler for
+`mixed_color_contamination`. The accepted defect style is a low-contrast,
+thin, smooth, interrupted spiral of partial arcs, with faint local cloudy haze
+wrapping the arcs. It should look embedded in the gray plastic, not like a dark
+scratch, closed ring, black stain, or raised decal.
+
+Do not switch this target to the QC7-5244 backend; only the visual idea was
+borrowed earlier. Do not move the mixed-color defect back to the generic bbox
+placement path. The latest rendered preview set before the final contrast and
+smoothness reduction is:
+
+```text
+examples/my_project/QC71336_GRAY_MIXEDCOLOR_THIN_SPIRAL_LOCAL_HAZE_V20/rgb/
+examples/my_project/QC71336_GRAY_MIXEDCOLOR_THIN_SPIRAL_LOCAL_HAZE_V20/mask/
+```
+
+After that preview, the script was tuned one more time to lower contrast below
+V19 and smooth the arc jitter. The current material alpha values are
+`haze=0.018`, `haze_outer=0.006`, `mist=0.030`, `outer=0.064`, `mid=0.118`,
+and `core=0.185`.
+
+Cloudy haze support arcs are RGB-visible but excluded from mask/bbox via
+`support_artifact_role`; keep that separation unless the annotation policy is
+explicitly changed.
 
 ## Dataset Construction Policy
 
